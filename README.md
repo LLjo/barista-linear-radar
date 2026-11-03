@@ -4,8 +4,6 @@ A [Barista](https://github.com/LLjo/Barista) plugin that lists the open Linear i
 (**Assigned**, **Mentions & subscribed**, **Created by me**), unseen first, with priority, state and cycle
 badges and links into Linear. It also gives Barista Automations a trigger, **"New Linear issue for me"**.
 
-> Status: built (layout C, inbox tabs). The spec is `docs/SPEC.md`; the mockups are in `docs/design/`.
-
 ## Install
 
 In Barista, open **Plugins → Install from repo** and enter `https://github.com/LLjo/barista-linear-radar`.

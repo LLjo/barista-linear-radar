@@ -7,7 +7,7 @@ import { getSettings } from "./settings.js";
 import { subjects } from "./subjects.js";
 import { listWorkspaces, recordPoll, setRejected } from "./workspaces.js";
 
-// The query's cost against Linear's complexity limit (SPEC "Data"): logged once per boot to measure it.
+// The query's cost against Linear's complexity limit: logged once per boot to measure it.
 let complexityLogged = false;
 
 const poller = createPoller({
