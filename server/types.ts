@@ -79,7 +79,7 @@ export interface Lists {
   mentions: IssueRow[];
   created: IssueRow[];
   more: Record<ListId, boolean>;
-  /** Linear sent a full page of notifications: older mentions may be behind it (not shown, only for first_seen). */
+  /** A full page of notifications came back (first_seen only, see `isCut`). */
   notificationsCut?: boolean;
 }
 
