@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseTriggerEvents } from "@barista/types/plugin-triggers";
+import { parseTriggerDefs, parseTriggerEvents } from "@barista/types/plugin-triggers";
 import manifest from "../manifest.json";
 import radar from "./fixtures/radar.json";
 import { DESCRIPTION_CAP, quoteDescription, startBody, TRIGGER_ID, triggerEvents } from "./events.js";
@@ -28,10 +28,17 @@ function seen(fresh: Record<string, string> = {}): Map<string, FirstSeen> {
 
 describe("the manifest trigger", () => {
   test("has the 7 fields, label multi", () => {
-    const t = manifest.contributes.triggers.triggers[0];
+    const t = manifest.contributes.triggers[0];
     expect(t.id).toBe(TRIGGER_ID);
     expect(t.fields.map((f) => f.name)).toEqual(["team", "label", "priority", "assignee", "project", "workspace", "list"]);
     expect(t.fields.find((f) => f.name === "label")).toMatchObject({ type: "string", multi: true });
+  });
+
+  test("parses clean through the protocol's own parser", () => {
+    const { triggers, errors } = parseTriggerDefs(manifest.contributes.triggers);
+    expect(errors).toEqual([]);
+    expect(triggers.map((d) => d.id)).toEqual([TRIGGER_ID]);
+    expect(triggers[0].fields).toHaveLength(7);
   });
 });
 

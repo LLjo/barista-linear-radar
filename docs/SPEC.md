@@ -276,7 +276,7 @@ if a field name or option shape there differs from this section, the notes win, 
 semantics below.
 
 ```json
-"contributes": { "triggers": { "triggers": [ {
+"contributes": { "triggers": [ {
   "id": "new-issue-for-me",
   "label": "New Linear issue for me",
   "description": "An open Linear issue newly shows up in one of your lists: assigned to you, created by you, or mentioning or subscribing you.",
@@ -289,7 +289,7 @@ semantics below.
     { "name": "workspace", "label": "Workspace", "type": "string" },
     { "name": "list",      "label": "List",      "type": "enum", "options": ["assigned", "mentions", "created"] }
   ]
-} ] } }
+} ] }
 ```
 
 The issue asked for team, label, priority, assignee = me and project. `workspace` and `list`
