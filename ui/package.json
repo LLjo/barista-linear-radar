@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "dependencies": {
     "@barista/plugin-sdk": "file:../../../shared/plugin-sdk",
@@ -16,6 +17,8 @@
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
-    "vite": "^6.0.0"
+    "vite": "^6.0.0",
+    "svelte-check": "^4.4.2",
+    "typescript": "^5.9.3"
   }
 }
