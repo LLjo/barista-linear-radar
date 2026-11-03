@@ -1,0 +1,13 @@
+{
+  "data": {
+    "viewer": {
+      "id": "user-me",
+      "name": "Alex Doe",
+      "organization": {
+        "id": "org-acme",
+        "name": "Acme",
+        "urlKey": "acme"
+      }
+    }
+  }
+}

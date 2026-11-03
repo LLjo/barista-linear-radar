@@ -1,0 +1,811 @@
+{
+  "data": {
+    "viewer": {
+      "id": "user-me",
+      "name": "Alex Doe",
+      "organization": {
+        "id": "org-acme",
+        "name": "Acme",
+        "urlKey": "acme"
+      }
+    },
+    "assigned": {
+      "nodes": [
+        {
+          "id": "iss-a1",
+          "identifier": "ENG-412",
+          "title": "Checkout returns 500 when the cart has a gift card",
+          "url": "https://linear.app/acme/issue/eng-412/x",
+          "priority": 1,
+          "priorityLabel": "",
+          "createdAt": "2026-10-20T10:00:00.000Z",
+          "updatedAt": "2026-11-03T09:00:00.000Z",
+          "description": "Steps:\n1. add a gift card\n2. pay",
+          "state": {
+            "name": "In Progress",
+            "type": "started",
+            "color": "#999999"
+          },
+          "team": {
+            "id": "team-ENG",
+            "key": "ENG",
+            "name": "ENG"
+          },
+          "cycle": {
+            "number": 42,
+            "name": null,
+            "isActive": true,
+            "startsAt": "2026-10-27T00:00:00.000Z",
+            "endsAt": "2026-11-10T00:00:00.000Z"
+          },
+          "project": {
+            "id": "proj-1",
+            "name": "Payments v2"
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "bug",
+                "color": "#888888"
+              }
+            ]
+          },
+          "assignee": {
+            "id": "user-me",
+            "name": "Alex Doe",
+            "isMe": true
+          },
+          "creator": {
+            "id": "user-sam",
+            "name": "Sam Rivera",
+            "isMe": false
+          }
+        },
+        {
+          "id": "iss-a2",
+          "identifier": "WEB-77",
+          "title": "Dark mode for the partner dashboard",
+          "url": "https://linear.app/acme/issue/web-77/x",
+          "priority": 3,
+          "priorityLabel": "",
+          "createdAt": "2026-10-20T10:00:00.000Z",
+          "updatedAt": "2026-11-02T09:00:00.000Z",
+          "description": null,
+          "state": {
+            "name": "In Review",
+            "type": "started",
+            "color": "#999999"
+          },
+          "team": {
+            "id": "team-WEB",
+            "key": "WEB",
+            "name": "WEB"
+          },
+          "cycle": {
+            "number": 42,
+            "name": null,
+            "isActive": true,
+            "startsAt": "2026-10-27T00:00:00.000Z",
+            "endsAt": "2026-11-10T00:00:00.000Z"
+          },
+          "project": null,
+          "labels": {
+            "nodes": [
+              {
+                "name": "frontend",
+                "color": "#888888"
+              }
+            ]
+          },
+          "assignee": {
+            "id": "user-me",
+            "name": "Alex Doe",
+            "isMe": true
+          },
+          "creator": {
+            "id": "user-me",
+            "name": "Alex Doe",
+            "isMe": true
+          }
+        },
+        {
+          "id": "iss-a3",
+          "identifier": "ENG-350",
+          "title": "Retry failed webhook deliveries with backoff",
+          "url": "https://linear.app/acme/issue/eng-350/x",
+          "priority": 3,
+          "priorityLabel": "",
+          "createdAt": "2026-10-20T10:00:00.000Z",
+          "updatedAt": "2026-10-30T09:00:00.000Z",
+          "description": null,
+          "state": {
+            "name": "Backlog",
+            "type": "backlog",
+            "color": "#999999"
+          },
+          "team": {
+            "id": "team-ENG",
+            "key": "ENG",
+            "name": "ENG"
+          },
+          "cycle": null,
+          "project": null,
+          "labels": {
+            "nodes": []
+          },
+          "assignee": {
+            "id": "user-me",
+            "name": "Alex Doe",
+            "isMe": true
+          },
+          "creator": {
+            "id": "user-sam",
+            "name": "Sam Rivera",
+            "isMe": false
+          }
+        }
+      ],
+      "pageInfo": {
+        "hasNextPage": false
+      }
+    },
+    "created": {
+      "nodes": [
+        {
+          "id": "iss-a2",
+          "identifier": "WEB-77",
+          "title": "Dark mode for the partner dashboard",
+          "url": "https://linear.app/acme/issue/web-77/x",
+          "priority": 3,
+          "priorityLabel": "",
+          "createdAt": "2026-10-20T10:00:00.000Z",
+          "updatedAt": "2026-11-02T09:00:00.000Z",
+          "description": null,
+          "state": {
+            "name": "In Review",
+            "type": "started",
+            "color": "#999999"
+          },
+          "team": {
+            "id": "team-WEB",
+            "key": "WEB",
+            "name": "WEB"
+          },
+          "cycle": {
+            "number": 42,
+            "name": null,
+            "isActive": true,
+            "startsAt": "2026-10-27T00:00:00.000Z",
+            "endsAt": "2026-11-10T00:00:00.000Z"
+          },
+          "project": null,
+          "labels": {
+            "nodes": [
+              {
+                "name": "frontend",
+                "color": "#888888"
+              }
+            ]
+          },
+          "assignee": {
+            "id": "user-me",
+            "name": "Alex Doe",
+            "isMe": true
+          },
+          "creator": {
+            "id": "user-me",
+            "name": "Alex Doe",
+            "isMe": true
+          }
+        },
+        {
+          "id": "iss-c1",
+          "identifier": "ENG-418",
+          "title": "Spike: replace the cron runner with a queue",
+          "url": "https://linear.app/acme/issue/eng-418/x",
+          "priority": 0,
+          "priorityLabel": "",
+          "createdAt": "2026-10-20T10:00:00.000Z",
+          "updatedAt": "2026-11-03T08:00:00.000Z",
+          "description": null,
+          "state": {
+            "name": "Triage",
+            "type": "triage",
+            "color": "#999999"
+          },
+          "team": {
+            "id": "team-ENG",
+            "key": "ENG",
+            "name": "ENG"
+          },
+          "cycle": null,
+          "project": null,
+          "labels": {
+            "nodes": [
+              {
+                "name": "spike",
+                "color": "#888888"
+              }
+            ]
+          },
+          "assignee": null,
+          "creator": {
+            "id": "user-me",
+            "name": "Alex Doe",
+            "isMe": true
+          }
+        },
+        {
+          "id": "iss-c2",
+          "identifier": "WEB-71",
+          "title": "Typo in the pricing page footer",
+          "url": "https://linear.app/acme/issue/web-71/x",
+          "priority": 4,
+          "priorityLabel": "",
+          "createdAt": "2026-10-20T10:00:00.000Z",
+          "updatedAt": "2026-10-28T09:00:00.000Z",
+          "description": null,
+          "state": {
+            "name": "Todo",
+            "type": "unstarted",
+            "color": "#999999"
+          },
+          "team": {
+            "id": "team-WEB",
+            "key": "WEB",
+            "name": "WEB"
+          },
+          "cycle": null,
+          "project": null,
+          "labels": {
+            "nodes": []
+          },
+          "assignee": {
+            "id": "user-kim",
+            "name": "Kim Lee",
+            "isMe": false
+          },
+          "creator": {
+            "id": "user-me",
+            "name": "Alex Doe",
+            "isMe": true
+          }
+        }
+      ],
+      "pageInfo": {
+        "hasNextPage": true
+      }
+    },
+    "subscribed": {
+      "nodes": [
+        {
+          "id": "iss-a1",
+          "identifier": "ENG-412",
+          "title": "Checkout returns 500 when the cart has a gift card",
+          "url": "https://linear.app/acme/issue/eng-412/x",
+          "priority": 1,
+          "priorityLabel": "",
+          "createdAt": "2026-10-20T10:00:00.000Z",
+          "updatedAt": "2026-11-03T09:00:00.000Z",
+          "description": "Steps:\n1. add a gift card\n2. pay",
+          "state": {
+            "name": "In Progress",
+            "type": "started",
+            "color": "#999999"
+          },
+          "team": {
+            "id": "team-ENG",
+            "key": "ENG",
+            "name": "ENG"
+          },
+          "cycle": {
+            "number": 42,
+            "name": null,
+            "isActive": true,
+            "startsAt": "2026-10-27T00:00:00.000Z",
+            "endsAt": "2026-11-10T00:00:00.000Z"
+          },
+          "project": {
+            "id": "proj-1",
+            "name": "Payments v2"
+          },
+          "labels": {
+            "nodes": [
+              {
+                "name": "bug",
+                "color": "#888888"
+              }
+            ]
+          },
+          "assignee": {
+            "id": "user-me",
+            "name": "Alex Doe",
+            "isMe": true
+          },
+          "creator": {
+            "id": "user-sam",
+            "name": "Sam Rivera",
+            "isMe": false
+          }
+        },
+        {
+          "id": "iss-c1",
+          "identifier": "ENG-418",
+          "title": "Spike: replace the cron runner with a queue",
+          "url": "https://linear.app/acme/issue/eng-418/x",
+          "priority": 0,
+          "priorityLabel": "",
+          "createdAt": "2026-10-20T10:00:00.000Z",
+          "updatedAt": "2026-11-03T08:00:00.000Z",
+          "description": null,
+          "state": {
+            "name": "Triage",
+            "type": "triage",
+            "color": "#999999"
+          },
+          "team": {
+            "id": "team-ENG",
+            "key": "ENG",
+            "name": "ENG"
+          },
+          "cycle": null,
+          "project": null,
+          "labels": {
+            "nodes": [
+              {
+                "name": "spike",
+                "color": "#888888"
+              }
+            ]
+          },
+          "assignee": null,
+          "creator": {
+            "id": "user-me",
+            "name": "Alex Doe",
+            "isMe": true
+          }
+        },
+        {
+          "id": "iss-s1",
+          "identifier": "WEB-80",
+          "title": "Lazy-load the analytics bundle",
+          "url": "https://linear.app/acme/issue/web-80/x",
+          "priority": 0,
+          "priorityLabel": "",
+          "createdAt": "2026-10-20T10:00:00.000Z",
+          "updatedAt": "2026-11-01T09:00:00.000Z",
+          "description": null,
+          "state": {
+            "name": "Backlog",
+            "type": "backlog",
+            "color": "#999999"
+          },
+          "team": {
+            "id": "team-WEB",
+            "key": "WEB",
+            "name": "WEB"
+          },
+          "cycle": {
+            "number": 43,
+            "name": null,
+            "isActive": false,
+            "startsAt": "2026-10-27T00:00:00.000Z",
+            "endsAt": "2026-11-10T00:00:00.000Z"
+          },
+          "project": null,
+          "labels": {
+            "nodes": [
+              {
+                "name": "perf",
+                "color": "#888888"
+              }
+            ]
+          },
+          "assignee": {
+            "id": "user-kim",
+            "name": "Kim Lee",
+            "isMe": false
+          },
+          "creator": {
+            "id": "user-sam",
+            "name": "Sam Rivera",
+            "isMe": false
+          }
+        }
+      ],
+      "pageInfo": {
+        "hasNextPage": false
+      }
+    },
+    "notifications": {
+      "nodes": [
+        {
+          "id": "n1",
+          "type": "issueAssignedToYou",
+          "readAt": null,
+          "snoozedUntilAt": null,
+          "createdAt": "2026-11-03T00:00:00.000Z",
+          "actor": {
+            "name": "Kim Lee"
+          },
+          "issueId": "iss-a1",
+          "issue": {
+            "id": "iss-a1",
+            "identifier": "ENG-412",
+            "title": "Checkout returns 500 when the cart has a gift card",
+            "url": "https://linear.app/acme/issue/eng-412/x",
+            "priority": 1,
+            "priorityLabel": "",
+            "createdAt": "2026-10-20T10:00:00.000Z",
+            "updatedAt": "2026-11-03T09:00:00.000Z",
+            "description": "Steps:\n1. add a gift card\n2. pay",
+            "state": {
+              "name": "In Progress",
+              "type": "started",
+              "color": "#999999"
+            },
+            "team": {
+              "id": "team-ENG",
+              "key": "ENG",
+              "name": "ENG"
+            },
+            "cycle": {
+              "number": 42,
+              "name": null,
+              "isActive": true,
+              "startsAt": "2026-10-27T00:00:00.000Z",
+              "endsAt": "2026-11-10T00:00:00.000Z"
+            },
+            "project": {
+              "id": "proj-1",
+              "name": "Payments v2"
+            },
+            "labels": {
+              "nodes": [
+                {
+                  "name": "bug",
+                  "color": "#888888"
+                }
+              ]
+            },
+            "assignee": {
+              "id": "user-me",
+              "name": "Alex Doe",
+              "isMe": true
+            },
+            "creator": {
+              "id": "user-sam",
+              "name": "Sam Rivera",
+              "isMe": false
+            }
+          }
+        },
+        {
+          "id": "n2",
+          "type": "issueMention",
+          "readAt": null,
+          "snoozedUntilAt": null,
+          "createdAt": "2026-11-03T05:00:00.000Z",
+          "actor": {
+            "name": "Sam Rivera"
+          },
+          "issueId": "iss-m1",
+          "issue": {
+            "id": "iss-m1",
+            "identifier": "ENG-405",
+            "title": "Flaky e2e: login redirect loop on Safari",
+            "url": "https://linear.app/acme/issue/eng-405/x",
+            "priority": 2,
+            "priorityLabel": "",
+            "createdAt": "2026-10-20T10:00:00.000Z",
+            "updatedAt": "2026-11-03T07:00:00.000Z",
+            "description": null,
+            "state": {
+              "name": "In Progress",
+              "type": "started",
+              "color": "#999999"
+            },
+            "team": {
+              "id": "team-ENG",
+              "key": "ENG",
+              "name": "ENG"
+            },
+            "cycle": null,
+            "project": null,
+            "labels": {
+              "nodes": [
+                {
+                  "name": "bug",
+                  "color": "#888888"
+                },
+                {
+                  "name": "e2e",
+                  "color": "#888888"
+                }
+              ]
+            },
+            "assignee": {
+              "id": "user-kim",
+              "name": "Kim Lee",
+              "isMe": false
+            },
+            "creator": {
+              "id": "user-sam",
+              "name": "Sam Rivera",
+              "isMe": false
+            }
+          }
+        },
+        {
+          "id": "n3",
+          "type": "issueCommentMention",
+          "readAt": "2026-11-03T06:30:00.000Z",
+          "snoozedUntilAt": null,
+          "createdAt": "2026-11-03T06:00:00.000Z",
+          "actor": {
+            "name": "Kim Lee"
+          },
+          "issueId": "iss-m1",
+          "issue": {
+            "id": "iss-m1",
+            "identifier": "ENG-405",
+            "title": "Flaky e2e: login redirect loop on Safari",
+            "url": "https://linear.app/acme/issue/eng-405/x",
+            "priority": 2,
+            "priorityLabel": "",
+            "createdAt": "2026-10-20T10:00:00.000Z",
+            "updatedAt": "2026-11-03T07:00:00.000Z",
+            "description": null,
+            "state": {
+              "name": "In Progress",
+              "type": "started",
+              "color": "#999999"
+            },
+            "team": {
+              "id": "team-ENG",
+              "key": "ENG",
+              "name": "ENG"
+            },
+            "cycle": null,
+            "project": null,
+            "labels": {
+              "nodes": [
+                {
+                  "name": "bug",
+                  "color": "#888888"
+                },
+                {
+                  "name": "e2e",
+                  "color": "#888888"
+                }
+              ]
+            },
+            "assignee": {
+              "id": "user-kim",
+              "name": "Kim Lee",
+              "isMe": false
+            },
+            "creator": {
+              "id": "user-sam",
+              "name": "Sam Rivera",
+              "isMe": false
+            }
+          }
+        },
+        {
+          "id": "n4",
+          "type": "issueCommentMention",
+          "readAt": "2026-11-02T08:00:00.000Z",
+          "snoozedUntilAt": null,
+          "createdAt": "2026-11-03T00:00:00.000Z",
+          "actor": null,
+          "issueId": "iss-m2",
+          "issue": {
+            "id": "iss-m2",
+            "identifier": "DES-31",
+            "title": "New empty states for the onboarding flow",
+            "url": "https://linear.app/acme/issue/des-31/x",
+            "priority": 4,
+            "priorityLabel": "",
+            "createdAt": "2026-10-20T10:00:00.000Z",
+            "updatedAt": "2026-11-02T07:00:00.000Z",
+            "description": null,
+            "state": {
+              "name": "Todo",
+              "type": "unstarted",
+              "color": "#999999"
+            },
+            "team": {
+              "id": "team-DES",
+              "key": "DES",
+              "name": "DES"
+            },
+            "cycle": null,
+            "project": {
+              "id": "proj-1",
+              "name": "Onboarding"
+            },
+            "labels": {
+              "nodes": [
+                {
+                  "name": "design",
+                  "color": "#888888"
+                }
+              ]
+            },
+            "assignee": null,
+            "creator": {
+              "id": "user-sam",
+              "name": "Sam Rivera",
+              "isMe": false
+            }
+          }
+        },
+        {
+          "id": "n5",
+          "type": "issueStatusChanged",
+          "readAt": null,
+          "snoozedUntilAt": "2099-01-01T00:00:00.000Z",
+          "createdAt": "2026-11-03T00:00:00.000Z",
+          "actor": {
+            "name": "Sam Rivera"
+          },
+          "issueId": "iss-a2",
+          "issue": {
+            "id": "iss-a2",
+            "identifier": "WEB-77",
+            "title": "Dark mode for the partner dashboard",
+            "url": "https://linear.app/acme/issue/web-77/x",
+            "priority": 3,
+            "priorityLabel": "",
+            "createdAt": "2026-10-20T10:00:00.000Z",
+            "updatedAt": "2026-11-02T09:00:00.000Z",
+            "description": null,
+            "state": {
+              "name": "In Review",
+              "type": "started",
+              "color": "#999999"
+            },
+            "team": {
+              "id": "team-WEB",
+              "key": "WEB",
+              "name": "WEB"
+            },
+            "cycle": {
+              "number": 42,
+              "name": null,
+              "isActive": true,
+              "startsAt": "2026-10-27T00:00:00.000Z",
+              "endsAt": "2026-11-10T00:00:00.000Z"
+            },
+            "project": null,
+            "labels": {
+              "nodes": [
+                {
+                  "name": "frontend",
+                  "color": "#888888"
+                }
+              ]
+            },
+            "assignee": {
+              "id": "user-me",
+              "name": "Alex Doe",
+              "isMe": true
+            },
+            "creator": {
+              "id": "user-me",
+              "name": "Alex Doe",
+              "isMe": true
+            }
+          }
+        },
+        {
+          "id": "n6",
+          "type": "issueNewComment",
+          "readAt": null,
+          "snoozedUntilAt": "2020-01-01T00:00:00.000Z",
+          "createdAt": "2026-11-03T00:00:00.000Z",
+          "actor": {
+            "name": "Sam Rivera"
+          },
+          "issueId": "iss-a3",
+          "issue": {
+            "id": "iss-a3",
+            "identifier": "ENG-350",
+            "title": "Retry failed webhook deliveries with backoff",
+            "url": "https://linear.app/acme/issue/eng-350/x",
+            "priority": 3,
+            "priorityLabel": "",
+            "createdAt": "2026-10-20T10:00:00.000Z",
+            "updatedAt": "2026-10-30T09:00:00.000Z",
+            "description": null,
+            "state": {
+              "name": "Backlog",
+              "type": "backlog",
+              "color": "#999999"
+            },
+            "team": {
+              "id": "team-ENG",
+              "key": "ENG",
+              "name": "ENG"
+            },
+            "cycle": null,
+            "project": null,
+            "labels": {
+              "nodes": []
+            },
+            "assignee": {
+              "id": "user-me",
+              "name": "Alex Doe",
+              "isMe": true
+            },
+            "creator": {
+              "id": "user-sam",
+              "name": "Sam Rivera",
+              "isMe": false
+            }
+          }
+        },
+        {
+          "id": "n7",
+          "type": "issueMention",
+          "readAt": null,
+          "snoozedUntilAt": null,
+          "createdAt": "2026-11-03T00:00:00.000Z",
+          "actor": {
+            "name": "Sam Rivera"
+          },
+          "issueId": "iss-x1",
+          "issue": {
+            "id": "iss-x1",
+            "identifier": "ENG-300",
+            "title": "Already shipped thing",
+            "url": "https://linear.app/acme/issue/eng-300/x",
+            "priority": 0,
+            "priorityLabel": "",
+            "createdAt": "2026-10-20T10:00:00.000Z",
+            "updatedAt": "2026-11-03T06:00:00.000Z",
+            "description": null,
+            "state": {
+              "name": "Done",
+              "type": "completed",
+              "color": "#999999"
+            },
+            "team": {
+              "id": "team-ENG",
+              "key": "ENG",
+              "name": "ENG"
+            },
+            "cycle": null,
+            "project": null,
+            "labels": {
+              "nodes": []
+            },
+            "assignee": {
+              "id": "user-kim",
+              "name": "Kim Lee",
+              "isMe": false
+            },
+            "creator": {
+              "id": "user-sam",
+              "name": "Sam Rivera",
+              "isMe": false
+            }
+          }
+        },
+        {
+          "id": "n8",
+          "type": "projectUpdateCreated",
+          "readAt": null,
+          "snoozedUntilAt": null,
+          "createdAt": "2026-11-03T00:00:00.000Z",
+          "actor": {
+            "name": "Sam Rivera"
+          },
+          "issueId": null,
+          "issue": null
+        }
+      ]
+    }
+  }
+}

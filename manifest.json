@@ -1,0 +1,25 @@
+{
+  "name": "linear-radar",
+  "title": "Linear Radar",
+  "description": "Linear issues that involve you, unseen first",
+  "icon": "linear",
+  "version": "0.1.0",
+  "automations": {
+    "triggers": [
+      {
+        "id": "new-issue-for-me",
+        "label": "New Linear issue for me",
+        "description": "An open Linear issue newly shows up in one of your lists: assigned to you, created by you, or mentioning or subscribing you.",
+        "fields": [
+          { "name": "team", "label": "Team key", "type": "string" },
+          { "name": "label", "label": "Label", "type": "string", "multi": true },
+          { "name": "priority", "label": "Priority", "type": "enum", "options": ["urgent", "high", "medium", "low", "none"] },
+          { "name": "assignee", "label": "Assignee", "type": "enum", "options": ["me", "someone else", "unassigned"] },
+          { "name": "project", "label": "Project", "type": "string" },
+          { "name": "workspace", "label": "Workspace", "type": "string" },
+          { "name": "list", "label": "List", "type": "enum", "options": ["assigned", "mentions", "created"] }
+        ]
+      }
+    ]
+  }
+}
