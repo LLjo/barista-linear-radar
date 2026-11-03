@@ -33,7 +33,7 @@ or internal URL, including in git history. Fixtures use invented values, like th
 ## Files
 
 ```
-manifest.json     name "linear-radar", title "Linear Radar", icon "linear", automations.triggers (below)
+manifest.json     name "linear-radar", title "Linear Radar", icon "linear", contributes.triggers (below)
 package.json      scaffold deps: hono 4.12.9 exact, zod ^4.3.6, SDK + types via file:; NO @linear/sdk
                   (plain fetch to the GraphQL endpoint, one query string we own and test)
 LICENSE           MIT (stub committed by #1430; keep it)
@@ -268,16 +268,15 @@ These are all client-side filters over the snapshot, kept with the others in
 | GET | `/issues` | `Snapshot` |
 | POST | `/refresh` | polls now → `Snapshot` |
 | GET | `/count` | `{unseen}`: the number in the toolbar chip |
-| GET | `/automations/events` | `?trigger=new-issue-for-me&since=<iso>` → `{events}` (below) |
 
 ## Automations trigger: "New Linear issue for me"
 
-It follows the contract from #1429. Read the final shape in Barista's plugins area notes:
+It follows the plugin triggers protocol from #1429 (reworked in #1438: `contributes.triggers`, served over NATS). Read the final shape in Barista's plugins area notes:
 if a field name or option shape there differs from this section, the notes win, but keep the
 semantics below.
 
 ```json
-"automations": { "triggers": [ {
+"contributes": { "triggers": { "triggers": [ {
   "id": "new-issue-for-me",
   "label": "New Linear issue for me",
   "description": "An open Linear issue newly shows up in one of your lists: assigned to you, created by you, or mentioning or subscribing you.",
@@ -290,7 +289,7 @@ semantics below.
     { "name": "workspace", "label": "Workspace", "type": "string" },
     { "name": "list",      "label": "List",      "type": "enum", "options": ["assigned", "mentions", "created"] }
   ]
-} ] }
+} ] } }
 ```
 
 The issue asked for team, label, priority, assignee = me and project. `workspace` and `list`
@@ -317,7 +316,7 @@ never calls Linear, so an Automations tick costs no Linear quota.
 - **Key**: the issue UUID, which Automations namespaces as `linear-radar:new-issue-for-me:<id>`.
   The identifier (`ENG-412`) is not a stable key, because it changes when an issue moves team.
   One key per issue means a rule starts at most one item per issue, ever.
-- **Field semantics come from the contract** (`@barista/types/automation-triggers`): a
+- **Field semantics come from the contract** (`@barista/types/plugin-triggers`): a
   `string` filter is a case-insensitive contains, an `enum` filter must equal one of its
   `options`, and an empty filter matches anything.
 - **`label`** is a `string[]`, so the manifest declares it `multi: true`. The contract allows
@@ -331,10 +330,11 @@ never calls Linear, so an Automations tick costs no Linear quota.
   An issue already in your lists when the rule was created therefore never starts anything,
   even after a relabel. Only an issue that enters your lists after the rule's first run can
   fire.
-- **Serve it through the SDK**: `automationEvents({"new-issue-for-me": handler})` from
-  `@barista/plugin-sdk/automations`. The SDK checks the trigger id and `since`, validates the
-  events, and answers exactly `{events: [...]}`. The contract treats any other body as "no
-  data this tick", so do not hand-roll the route.
+- **Serve it through the SDK**: `serveTriggers({"new-issue-for-me": handler})` from
+  `@barista/plugin-sdk/triggers`. It answers NATS requests on `S.pluginTriggerEvents("linear-radar")`
+  (no HTTP route): it checks the trigger id and `since`, validates the events, and replies exactly
+  `{events: [...]}` or `{error}`. The protocol treats anything else as "no data this tick", so do
+  not hand-roll the responder.
 - **`since`** is `null` on a rule's first poll. That poll is the baseline: return every event
   that stands now. After that, `since` is the rule's baseline time; return the events with
   `at >= since`.
@@ -349,7 +349,7 @@ never calls Linear, so an Automations tick costs no Linear quota.
     (`polled_at`) is recorded `initial` too. A first poll also marks rows left behind as `initial`.
     A poll whose workspace was removed, re-added or given another person's key while it ran
     records nothing, and another person's key starts the workspace over (`polled_at` NULL).
-- **Return `null` until `snapshot.ready`, never `[]`.** With no workspace at all, too. The SDK turns `null` into a 503
+- **Return `null` until `snapshot.ready`, never `[]`.** With no workspace at all, too. The SDK turns `null` into an error reply
   "not ready", and Automations reads that as "no data this tick". Return `null` too while
   any workspace is rejected or rate-limited, because its issues are unknown, not absent.
   `[]` means "nothing stands now". On a rule's first poll that `[]` becomes its baseline, so

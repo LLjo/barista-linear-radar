@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import { automationEvents } from "@barista/plugin-sdk/automations";
+import type { TriggerHandler } from "@barista/plugin-sdk/triggers";
 import { TRIGGER_ID, triggerEvents } from "./events.js";
 import { addKey, removeKey, type NewWorkspace } from "./keys.js";
 import { gql, LinearError } from "./linear.js";
@@ -93,9 +93,11 @@ const app = new Hono()
   })
   .get("/issues", (c) => c.json(forPage(getSnapshot())))
   .post("/refresh", async (c) => c.json(forPage(await poll())))
-  .get("/count", (c) => c.json({ unseen: getSnapshot().unseen }))
-  // The SDK route: it checks the trigger id and `since`, validates the events, and answers 503 for null.
-  .route("/", automationEvents({ [TRIGGER_ID]: ({ since }) => eventsNow(since) }));
+  .get("/count", (c) => c.json({ unseen: getSnapshot().unseen }));
+
+/** Served by `serveTriggers` (index.ts): the SDK checks the trigger id and `since`, validates the events, and
+ *  answers "not ready" for null. */
+export const triggerHandlers: Record<string, TriggerHandler> = { [TRIGGER_ID]: ({ since }) => eventsNow(since) };
 
 export type AppType = typeof app;
 export default app;

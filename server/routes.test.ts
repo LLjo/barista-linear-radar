@@ -34,7 +34,8 @@ globalThis.fetch = (async (_url: string, init: RequestInit) => {
   return json(viewer);
 }) as unknown as typeof fetch;
 
-const { default: app } = await import("./routes.js");
+const { default: app, triggerHandlers } = await import("./routes.js");
+const { answerTriggerRequest } = await import("@barista/plugin-sdk/triggers");
 const { poll } = await import("./poller.js");
 const { db } = await import("./db.js");
 const ws = await import("./workspaces.js");
@@ -57,7 +58,11 @@ async function call(method: string, path: string, body?: unknown) {
   bodies.push(text);
   return { status: res.status, text, json: () => JSON.parse(text) };
 }
-const events = (since?: string) => call("GET", `/automations/events?trigger=new-issue-for-me${since ? `&since=${since}` : ""}`);
+async function events(since?: string): Promise<any> {
+  const answer = await answerTriggerRequest(triggerHandlers, { trigger: "new-issue-for-me", since: since ?? null });
+  bodies.push(JSON.stringify(answer));
+  return answer;
+}
 
 afterAll(() => {
   for (const s of spies) s.mockRestore();
@@ -68,12 +73,12 @@ afterAll(() => {
 
 describe("routes", () => {
   beforeAll(async () => {
-    expect((await events()).status).toBe(503);
+    expect((await events()).error).toContain("not ready yet");
   });
 
   test("a rule polling before any workspace exists gets not ready, never [] (its baseline)", async () => {
     await poll();
-    expect((await events()).status).toBe(503);
+    expect((await events()).error).toContain("not ready yet");
   });
 
   test("the db file is owner-only", () => {
@@ -108,21 +113,19 @@ describe("routes", () => {
     expect(issues.assigned.map((r: { identifier: string }) => r.identifier)).toEqual(["ENG-412", "ENG-350", "WEB-77"]);
     expect(issues.assigned[0].description).toBeUndefined();
     expect((await call("GET", "/count")).json()).toEqual({ unseen: 3 });
-    const e = await events();
-    expect(e.status).toBe(200);
-    expect(e.json()).toEqual({ events: [] });
+    expect(await events()).toEqual({ events: [] });
   });
 
   test("an issue new since the first poll is one event", async () => {
     db.run("UPDATE linear_radar_first_seen SET initial = 0, first_seen_at = ? WHERE issue_id = ?", ["2026-11-03T10:00:00.000Z", "iss-c1"]);
-    const e = (await events("2026-11-03T09:00:00.000Z")).json();
+    const e = await events("2026-11-03T09:00:00.000Z");
     expect(e.events.map((x: { key: string }) => x.key)).toEqual(["iss-c1"]);
     expect(e.events[0].start.title).toBe("Linear ENG-418: Spike: replace the cron runner with a queue");
   });
 
-  test("an unknown trigger is 404, a bad since 400", async () => {
-    expect((await call("GET", "/automations/events?trigger=nope")).status).toBe(404);
-    expect((await events("yesterday")).status).toBe(400);
+  test("an unknown trigger and a bad since are error replies", async () => {
+    expect(await answerTriggerRequest(triggerHandlers, { trigger: "nope", since: null })).toEqual({ error: 'no trigger "nope" here' });
+    expect(await events("yesterday")).toEqual({ error: "since must be an ISO time" });
   });
 
   test("settings save the interval", async () => {
@@ -145,7 +148,7 @@ describe("routes", () => {
     const s = (await call("POST", "/refresh")).json();
     expect(s.workspaces[0].status).toBe("rejected");
     expect(s.assigned.length).toBe(3);
-    expect((await events()).status).toBe(503);
+    expect((await events()).error).toContain("not ready yet");
     radarStatus = 200;
   });
 
@@ -170,7 +173,7 @@ describe("routes", () => {
     await call("POST", "/workspaces", { apiKey: KEY });
     await poll();
     expect(seenRows().every((r) => r.initial === 1)).toBe(true);
-    expect((await events()).json()).toEqual({ events: [] });
+    expect(await events()).toEqual({ events: [] });
   });
 
   test("another person's key for the workspace starts over: their next poll is a first poll", async () => {
@@ -200,20 +203,20 @@ describe("routes", () => {
     radarBody = page(all.slice(0, 50));
     await call("POST", "/workspaces", { apiKey: KEY });
     await poll();
-    const baseline = (await events()).json();
+    const baseline = await events();
     expect(baseline).toEqual({ events: [] });
     // Issue 55 was on page 2 all along. A comment bumps it into the first 50.
     radarBody = page([all[55], ...all.slice(0, 49)]);
     await poll();
-    expect((await events()).json()).toEqual({ events: [] });
+    expect(await events()).toEqual({ events: [] });
     // A genuinely new issue does fire.
     radarBody = page([issue(99, new Date(Date.now() + 1000).toISOString()), all[55], ...all.slice(0, 48)]);
     await poll();
-    expect((await events()).json().events.map((e: { key: string }) => e.key)).toEqual(["big-99"]);
+    expect((await events()).events.map((e: { key: string }) => e.key)).toEqual(["big-99"]);
     // Linear later sends everything (issues closed): an old one never seen still does not fire.
     radarBody = { data: { ...page([all[57]]).data, assigned: { nodes: [all[57]], pageInfo: { hasNextPage: false } } } };
     await poll();
-    expect((await events()).json()).toEqual({ events: [] });
+    expect(await events()).toEqual({ events: [] });
     radarBody = null;
   });
 

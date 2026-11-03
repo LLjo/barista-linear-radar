@@ -1,4 +1,4 @@
-import type { AutomationEventInput } from "@barista/plugin-sdk/automations";
+import type { TriggerEventInput } from "@barista/plugin-sdk/triggers";
 import type { IssueRow, ListId, Snapshot } from "./types.js";
 import type { FirstSeen } from "./workspaces.js";
 
@@ -42,7 +42,7 @@ export function startBody(r: IssueRow): string {
   ].join("\n");
 }
 
-export function toEvent(r: IssueRow, list: ListId, at: string): AutomationEventInput {
+export function toEvent(r: IssueRow, list: ListId, at: string): TriggerEventInput {
   return {
     key: r.id,
     title: `${r.identifier} ${r.title}`,
@@ -67,12 +67,12 @@ export function toEvent(r: IssueRow, list: ListId, at: string): AutomationEventI
  * `[]` on a rule's first poll would become its baseline. Issues first seen in their workspace's
  * first poll (`initial`) are never served. `since` null = the rule's baseline poll: all that stands.
  */
-export function triggerEvents(s: Snapshot, seen: Map<string, FirstSeen>, since: Date | null): AutomationEventInput[] | null {
+export function triggerEvents(s: Snapshot, seen: Map<string, FirstSeen>, since: Date | null): TriggerEventInput[] | null {
   // No workspace yet is "I don't know yet" too: a rule's first poll answered [] here would become its
   // baseline, and every issue of the workspace added later would look new.
   if (!s.ready || !s.workspaces.length) return null;
   if (s.workspaces.some((w) => w.status !== "ok" || w.lastError || w.pausedUntil)) return null;
-  const out: AutomationEventInput[] = [];
+  const out: TriggerEventInput[] = [];
   for (const list of ["assigned", "mentions", "created"] as const) {
     for (const r of s[list]) {
       const f = seen.get(r.id);
