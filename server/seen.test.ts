@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { seenEntries } from "./snapshot.js";
+import { isCut, seenEntries } from "./snapshot.js";
 import type { IssueRow, Lists } from "./types.js";
 
 const POLLED = "2026-11-01T00:00:00.000Z";
@@ -15,6 +15,14 @@ const lists = (more: Partial<Lists["more"]> = {}): Lists => ({
   more: { assigned: false, mentions: false, created: false, ...more },
 });
 const initial = (l: Lists, polledAt: string | null, cut = false) => Object.fromEntries(seenEntries(l, polledAt, cut).map((e) => [e.id, e.initial]));
+
+describe("isCut", () => {
+  test("a list past 50, or a full page of notifications, is a cut", () => {
+    expect(isCut(lists())).toBe(false);
+    expect(isCut(lists({ created: true }))).toBe(true);
+    expect(isCut({ ...lists(), notificationsCut: true })).toBe(true);
+  });
+});
 
 describe("seenEntries", () => {
   test("the first poll: everything is initial", () => {

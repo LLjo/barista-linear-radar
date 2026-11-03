@@ -4,12 +4,15 @@
  * unauthenticated request answering AUTHENTICATION_ERROR means the text is valid).
  */
 
+/** The notifications page size: a full page means older ones may be behind it. */
+export const NOTIFICATIONS_PAGE = 100;
+
 export const RADAR_QUERY = `query Radar($assigned: IssueFilter!, $created: IssueFilter!, $subscribed: IssueFilter!) {
   viewer { id name organization { id name urlKey } }
   assigned: issues(first: 50, orderBy: updatedAt, filter: $assigned) { nodes { ...Iss } pageInfo { hasNextPage } }
   created: issues(first: 50, orderBy: updatedAt, filter: $created) { nodes { ...Iss } pageInfo { hasNextPage } }
   subscribed: issues(first: 50, orderBy: updatedAt, filter: $subscribed) { nodes { ...Iss } pageInfo { hasNextPage } }
-  notifications(first: 100, orderBy: updatedAt) {
+  notifications(first: ${NOTIFICATIONS_PAGE}, orderBy: updatedAt) {
     nodes { id type readAt snoozedUntilAt createdAt actor { name }
       ... on IssueNotification { issueId issue { ...Iss } } }
   }

@@ -9,7 +9,7 @@
       {
         "id": "new-issue-for-me",
         "label": "New Linear issue for me",
-        "description": "An open Linear issue newly shows up in one of your lists: assigned to you, created by you, or mentioning or subscribing you.",
+        "description": "An open Linear issue newly shows up in one of your lists: assigned to you, created by you, or mentioning or subscribing you. Once a list passes 50 issues or 100 notifications, an issue older than the first sync never fires, even if it is reassigned to you or mentions you later.",
         "fields": [
           { "name": "team", "label": "Team key", "type": "string" },
           { "name": "label", "label": "Label", "type": "string", "multi": true },

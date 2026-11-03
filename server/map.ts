@@ -1,4 +1,4 @@
-import type { GqlIssue, GqlNotification, RadarData } from "./query.js";
+import { NOTIFICATIONS_PAGE, type GqlIssue, type GqlNotification, type RadarData } from "./query.js";
 import type { IssueRow, Lists, Priority, Why } from "./types.js";
 
 const MENTION_TYPES: Record<string, Why> = { issueMention: "mention", issueCommentMention: "comment-mention" };
@@ -95,5 +95,6 @@ export function mapRadar(data: RadarData, ws: IssueRow["workspace"], now = Date.
       created: !!data.created.pageInfo?.hasNextPage,
       mentions: !!data.subscribed.pageInfo?.hasNextPage,
     },
+    notificationsCut: notes.length >= NOTIFICATIONS_PAGE,
   };
 }

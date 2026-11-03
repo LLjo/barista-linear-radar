@@ -344,8 +344,8 @@ never calls Linear, so an Automations tick costs no Linear quota.
   to a running rule would start an item for every issue already in it. Rows persist across
   restarts, so a restart does not re-time anything.
   - *Build (#1431):* a list Linear cuts at 50 hides the rest, so an issue we had not seen may have
-    stood at the first poll all along. Once any list of a workspace has been cut
-    (`linear_radar_workspaces.cut`), an unseen issue created before the workspace's first poll
+    stood at the first poll all along. Once any list of a workspace has been cut, or a full page of
+    100 notifications came back (`linear_radar_workspaces.cut`), an unseen issue created before the workspace's first poll
     (`polled_at`) is recorded `initial` too. A first poll also marks rows left behind as `initial`.
     A poll whose workspace was removed, re-added or given another person's key while it ran
     records nothing, and another person's key starts the workspace over (`polled_at` NULL).

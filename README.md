@@ -26,6 +26,11 @@ when an open issue newly shows up in one of your lists, and filters on team, lab
 project, workspace and list. Issues that were already in your lists when a rule (or a workspace) was added
 never fire. The trigger reads the plugin's last poll, so it costs no extra Linear requests.
 
+One limit: Linear Radar reads the newest 50 issues per list and the newest 100 notifications. Once a
+workspace has more than that, it cannot tell an old issue that was always there from one that just
+arrived, so an issue created before Linear Radar first synced that workspace never fires, even when it
+is reassigned to you or mentions you later. Issues created after the first sync always fire.
+
 ## Develop
 
 ```bash

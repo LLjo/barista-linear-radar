@@ -28,6 +28,13 @@ describe("list precedence", () => {
     expect(all).not.toContain("iss-x1");
   });
 
+  test("a full page of 100 notifications marks them cut; fewer does not", () => {
+    expect(lists.notificationsCut).toBe(false);
+    const full = structuredClone(data);
+    full.notifications.nodes = Array.from({ length: 100 }, (_, n) => ({ ...data.notifications.nodes[7], id: `n-${n}` }));
+    expect(mapRadar(full, WS, NOW).notificationsCut).toBe(true);
+  });
+
   test("hasNextPage sets the list's more flag", () => {
     expect(lists.more).toEqual({ assigned: false, created: true, mentions: false });
   });
