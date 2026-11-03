@@ -4,7 +4,7 @@ A [Barista](https://github.com/LLjo/Barista) plugin that lists the open Linear i
 (**Assigned**, **Mentions & subscribed**, **Created by me**), unseen first, with priority, state and cycle
 badges and links into Linear. It also gives Barista Automations a trigger, **"New Linear issue for me"**.
 
-> Status: design. The plugin is not built yet. See `docs/SPEC.md` and the mockups in `docs/design/`.
+> Status: built (layout C, inbox tabs). The spec is `docs/SPEC.md`; the mockups are in `docs/design/`.
 
 ## Install
 
@@ -18,6 +18,22 @@ In Barista, open **Plugins → Install from repo** and enter `https://github.com
    Linear workspace.
 
 The key stays on the Barista host. It is never shown again, never logged and never sent to the browser.
+
+## Automations
+
+The plugin offers the Automations trigger **Linear Radar: New Linear issue for me**. It fires once per issue,
+when an open issue newly shows up in one of your lists, and filters on team, label, priority, assignee,
+project, workspace and list. Issues that were already in your lists when a rule (or a workspace) was added
+never fire. The trigger reads the plugin's last poll, so it costs no extra Linear requests.
+
+## Develop
+
+```bash
+bun install && bun test && bunx tsc -p server/tsconfig.json
+cd ui && bun install && bun run build
+```
+
+Tests mock Linear with the invented fixtures in `server/fixtures/`.
 
 ## License
 

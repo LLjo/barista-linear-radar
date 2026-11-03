@@ -1,0 +1,64 @@
+/* The mockups' atoms (docs/design/tokens.css + mockup-c.html); the tokens come from the SDK's theme.css. */
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body { background: var(--panel); color: var(--ink); font: var(--t-m)/1.45 var(--sans); -webkit-font-smoothing: antialiased; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button { font: inherit; color: inherit; }
+/* Shared atoms */
+.mono { font-family: var(--mono); }
+.dim { color: var(--ink-3); }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 0 7px; height: 18px; border-radius: var(--r-pill); font-size: var(--t-xs); font-weight: 500; white-space: nowrap; }
+.chip.ok   { color: var(--work-fg); background: var(--work-bg); }
+.chip.bad  { color: var(--fail-fg); background: var(--fail-bg); }
+.chip.wait { color: var(--need-fg); background: var(--need-bg); }
+.chip.idle { color: var(--done-fg); background: var(--done-bg); }
+.chip.draft{ color: var(--steel);   background: transparent; box-shadow: inset 0 0 0 1px var(--line-2); }
+.links { display: inline-flex; gap: 10px; font-size: var(--t-s); }
+.links a { color: var(--ink-3); }
+.links a:hover { color: var(--link); text-decoration: none; }
+.ci { font-family: var(--mono); font-size: var(--t-xs); }
+.ci.ok { color: var(--work-fg); } .ci.bad { color: var(--fail-fg); } .ci.wait { color: var(--need-fg); }
+input, select { font: inherit; color: var(--ink); background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 3px 8px; }
+
+/* ---- Linear Radar atoms (shared by every mockup) ---- */
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding-bottom: 12px; border-bottom: 1px solid var(--line); font-size: var(--t-s); color: var(--ink-2); }
+.bar h1 { margin: 0 6px 0 0; font: 600 var(--t-l) var(--display); color: var(--ink); }
+.bar label { display: inline-flex; align-items: center; gap: 6px; }
+.bar .pill { padding: 1px 8px; border-radius: var(--r-pill); background: var(--sel); color: var(--ink); cursor: pointer; }
+.bar .pill.off { background: transparent; color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line-2); }
+.bar .sync { margin-left: auto; color: var(--ink-3); display: inline-flex; align-items: center; gap: 8px; }
+.bar .sync button, .iconbtn { background: none; border: 0; color: var(--ink-2); cursor: pointer; padding: 0 2px; }
+
+/* unseen: a caramel dot + brighter title; seen rows keep a blank slot so titles line up */
+.dot-new { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
+.dot-seen { width: 7px; height: 7px; flex: none; }
+.unseen .title { font-weight: 600; color: var(--ink); }
+.seen .title { color: var(--ink-2); }
+.new-n { color: var(--accent); font: 500 var(--t-xs) var(--mono); }
+
+/* priority: Linear's bar glyph + a word in the tooltip; urgent is a filled box */
+.prio { display: inline-flex; align-items: flex-end; gap: 1px; width: 14px; height: 12px; flex: none; }
+.prio i { width: 3px; background: var(--ink-3); border-radius: 1px; opacity: .3; }
+.prio i:nth-child(1) { height: 5px; } .prio i:nth-child(2) { height: 8px; } .prio i:nth-child(3) { height: 11px; }
+.prio.p2 i, .prio.p3 i:nth-child(-n+2), .prio.p4 i:nth-child(1) { opacity: 1; background: var(--ink-2); }
+.prio.p1 { width: 12px; height: 12px; margin-right: 2px; border-radius: 3px; background: var(--fail-fg); color: var(--fail-bg); font: 700 10px/12px var(--sans); justify-content: center; align-items: center; }
+.prio.p0 { color: var(--ink-3); font-size: 11px; justify-content: center; align-items: center; }
+
+/* state chips keyed by Linear's WorkflowState.type */
+.chip.triage    { color: var(--violet);  background: transparent; box-shadow: inset 0 0 0 1px var(--violet); }
+.chip.backlog   { color: var(--steel);   background: transparent; box-shadow: inset 0 0 0 1px var(--line-2); }
+.chip.unstarted { color: var(--done-fg); background: var(--done-bg); }
+.chip.started   { color: var(--need-fg); background: var(--need-bg); }
+.chip.review    { color: var(--work-fg); background: var(--work-bg); }
+.chip.cycle     { color: var(--ink-3);   background: transparent; box-shadow: inset 0 0 0 1px var(--line); font-family: var(--mono); }
+.chip.cycle.now { color: var(--accent);  box-shadow: inset 0 0 0 1px var(--accent); }
+.chip.lbl       { color: var(--ink-3);   background: var(--raised); }
+.ident { font-family: var(--mono); color: var(--ink-3); font-size: var(--t-xs); }
+.why { color: var(--ink-3); font-size: var(--t-xs); }
+.why.mention { color: var(--accent); }
+.seg { display: inline-flex; gap: 2px; font-weight: 400; font-size: var(--t-xs); }
+.seg span { padding: 1px 8px; border-radius: var(--r-pill); color: var(--ink-3); cursor: pointer; }
+.seg span.on { background: var(--sel); color: var(--ink); }
+.empty { padding: 10px; color: var(--ink-3); font-size: var(--t-s); }
+.banner { margin-top: 10px; padding: 6px 10px; border-radius: var(--r-sm); background: var(--fail-bg); color: var(--fail-fg); font-size: var(--t-s); }

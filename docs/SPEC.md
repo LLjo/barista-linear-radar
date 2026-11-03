@@ -116,6 +116,10 @@ a real key: the build measures its cost (the `X-Complexity` response header) on 
 workspace and writes the number here. If Linear says the query is too complex, split
 `notifications` into a second request.
 
+> Build (#1431): the query (with `actor { name }` added to notifications for `by`) and the viewer and
+> teams queries validate against the live schema. The cost is **not measured yet**: it needs a real key.
+> The plugin logs `[linear-radar] radar query complexity: N` (the `X-Complexity` header) on its first poll.
+
 ```graphql
 query Radar($assigned: IssueFilter!, $created: IssueFilter!, $subscribed: IssueFilter!) {
   viewer { id name organization { id name urlKey } }

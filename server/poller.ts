@@ -7,10 +7,20 @@ import { getSettings } from "./settings.js";
 import { subjects } from "./subjects.js";
 import { listWorkspaces, markPolled, recordSeen, setStatus } from "./workspaces.js";
 
+// The query's cost against Linear's complexity limit (SPEC "Data"): logged once per boot to measure it.
+let complexityLogged = false;
+
 const poller = createPoller({
   listWorkspaces,
   getKey,
-  fetchRadar: async (key) => (await gql<RadarData>(key, RADAR_QUERY, { ...buildVars() })).data,
+  fetchRadar: async (key) => {
+    const r = await gql<RadarData>(key, RADAR_QUERY, { ...buildVars() });
+    if (r.complexity && !complexityLogged) {
+      complexityLogged = true;
+      console.info(`[linear-radar] radar query complexity: ${r.complexity}`);
+    }
+    return r.data;
+  },
   fetchTeams: async (key) => (await gql<TeamsData>(key, TEAMS_QUERY)).data.teams.nodes,
   markPolled,
   setRejected: (id, now) => setStatus(id, "rejected", now),
