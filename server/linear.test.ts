@@ -91,6 +91,12 @@ describe("gql", () => {
     expect(await failure(gql(KEY, "q"))).toMatchObject({ kind: "network", message: "Linear did not answer within 20 s" });
   });
 
+  test("a body that stalls past the timeout is network, not graphql", async () => {
+    globalThis.fetch = (async () =>
+      new Response(new ReadableStream({ pull: (c) => c.error(new DOMException("The operation timed out.", "TimeoutError")) }), { status: 200 })) as unknown as typeof fetch;
+    expect(await failure(gql(KEY, "q"))).toMatchObject({ kind: "network", message: "Linear did not answer within 20 s" });
+  });
+
   test("a hung request is cut off by its own signal", async () => {
     globalThis.fetch = ((_u: string, i: RequestInit) =>
       new Promise((_, reject) => {

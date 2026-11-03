@@ -10,10 +10,13 @@ import viewer from "./fixtures/viewer.json";
 const KEY = "fake-linear-key-acme-0123456789abcdef";
 const KEY2 = "fake-linear-key-acme-second-9876543210";
 const BAD = "fake-linear-key-rejected-000000000000";
+const OTHER = "fake-linear-key-acme-other-person-0000";
 const dir = mkdtempSync(join(tmpdir(), "linear-radar-test-"));
 process.env.PLUGIN_DATA_DIR = dir;
 
 let radarStatus = 200;
+/** Replaces the radar fixture when set. */
+let radarBody: unknown = null;
 const realFetch = globalThis.fetch;
 const gqlError = (code: string, message: string) => ({ errors: [{ message, extensions: { code } }] });
 
@@ -24,15 +27,19 @@ globalThis.fetch = (async (_url: string, init: RequestInit) => {
   const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { "Content-Type": "application/json" } });
   if (key === BAD) return json(gqlError("AUTHENTICATION_ERROR", "Authentication required, not authenticated"), 401);
   if (query.includes("query Radar")) {
-    return radarStatus === 200 ? json(radar) : json(gqlError("AUTHENTICATION_ERROR", "Authentication required, not authenticated"), radarStatus);
+    return radarStatus === 200 ? json(radarBody ?? radar) : json(gqlError("AUTHENTICATION_ERROR", "Authentication required, not authenticated"), radarStatus);
   }
   if (query.includes("teams(")) return json(teams);
+  if (key === OTHER) return json({ data: { viewer: { ...viewer.data.viewer, id: "user-other", name: "Kim Lee" } } });
   return json(viewer);
 }) as unknown as typeof fetch;
 
 const { default: app } = await import("./routes.js");
 const { poll } = await import("./poller.js");
 const { db } = await import("./db.js");
+const ws = await import("./workspaces.js");
+const { mapRadar } = await import("./map.js");
+const seenRows = () => db.query<{ issue_id: string; initial: number }>("SELECT issue_id, initial FROM linear_radar_first_seen ORDER BY issue_id");
 
 const bodies: string[] = [];
 const logs: unknown[][] = [];
@@ -61,6 +68,11 @@ afterAll(() => {
 
 describe("routes", () => {
   beforeAll(async () => {
+    expect((await events()).status).toBe(503);
+  });
+
+  test("a rule polling before any workspace exists gets not ready, never [] (its baseline)", async () => {
+    await poll();
     expect((await events()).status).toBe(503);
   });
 
@@ -144,10 +156,71 @@ describe("routes", () => {
     expect((await call("DELETE", "/workspaces/org-acme")).status).toBe(404);
   });
 
+  test("a poll that outlives its workspace (removed mid-request) records nothing", async () => {
+    await call("POST", "/workspaces", { apiKey: KEY });
+    const stale = ws.getWorkspace("org-acme")!;
+    await call("DELETE", "/workspaces/org-acme");
+    const lists = mapRadar(radar.data as never, { id: "org-acme", name: "Acme", urlKey: "acme" });
+    expect(ws.recordPoll(stale, lists, new Date().toISOString())).toBe(false);
+    expect(seenRows()).toEqual([]);
+  });
+
+  test("a workspace's first poll makes every issue initial, even over rows left behind", async () => {
+    db.run("INSERT INTO linear_radar_first_seen (issue_id, workspace_id, first_seen_at, initial) VALUES ('iss-a1', 'org-acme', '2026-11-03T10:00:00.000Z', 0)");
+    await call("POST", "/workspaces", { apiKey: KEY });
+    await poll();
+    expect(seenRows().every((r) => r.initial === 1)).toBe(true);
+    expect((await events()).json()).toEqual({ events: [] });
+  });
+
+  test("another person's key for the workspace starts over: their next poll is a first poll", async () => {
+    db.run("UPDATE linear_radar_first_seen SET initial = 0 WHERE issue_id = 'iss-c1'");
+    const r = await call("PUT", "/workspaces/org-acme/key", { apiKey: OTHER });
+    expect(r.json()).toMatchObject({ viewerName: "Kim Lee" });
+    // The PUT started a poll already; it ran as a first poll.
+    await poll();
+    expect(seenRows().every((x) => x.initial === 1)).toBe(true);
+    // The same person's new key keeps the history.
+    await call("PUT", "/workspaces/org-acme/key", { apiKey: OTHER });
+    expect(db.get<{ p: string | null }>("SELECT polled_at AS p FROM linear_radar_workspaces")!.p).not.toBeNull();
+  });
+
+  test("more than 50 issues: an old one past the first page that gets updated never fires; a new one does", async () => {
+    await call("DELETE", "/workspaces/org-acme");
+    const node = radar.data.assigned.nodes[0];
+    const issue = (n: number, createdAt: string) => ({ ...node, id: `big-${n}`, identifier: `ENG-${n}`, title: `Issue ${n}`, createdAt, updatedAt: createdAt });
+    const OLD = "2025-01-01T00:00:00.000Z";
+    const page = (nodes: unknown[]) => ({
+      data: { ...radar.data, assigned: { nodes, pageInfo: { hasNextPage: true } },
+        created: { nodes: [], pageInfo: { hasNextPage: false } }, subscribed: { nodes: [], pageInfo: { hasNextPage: false } },
+        notifications: { nodes: [] } },
+    });
+    // 60 assigned issues; Linear sends the newest 50.
+    const all = Array.from({ length: 60 }, (_, n) => issue(n, OLD));
+    radarBody = page(all.slice(0, 50));
+    await call("POST", "/workspaces", { apiKey: KEY });
+    await poll();
+    const baseline = (await events()).json();
+    expect(baseline).toEqual({ events: [] });
+    // Issue 55 was on page 2 all along. A comment bumps it into the first 50.
+    radarBody = page([all[55], ...all.slice(0, 49)]);
+    await poll();
+    expect((await events()).json()).toEqual({ events: [] });
+    // A genuinely new issue does fire.
+    radarBody = page([issue(99, new Date(Date.now() + 1000).toISOString()), all[55], ...all.slice(0, 48)]);
+    await poll();
+    expect((await events()).json().events.map((e: { key: string }) => e.key)).toEqual(["big-99"]);
+    // Linear later sends everything (issues closed): an old one never seen still does not fire.
+    radarBody = { data: { ...page([all[57]]).data, assigned: { nodes: [all[57]], pageInfo: { hasNextPage: false } } } };
+    await poll();
+    expect((await events()).json()).toEqual({ events: [] });
+    radarBody = null;
+  });
+
   test("no key appears in any response body or any log line", () => {
     expect(bodies.length).toBeGreaterThan(15);
     expect(logs.length).toBeGreaterThan(0); // the rejected poll warned: the spy is looking
-    for (const k of [KEY, KEY2, BAD]) {
+    for (const k of [KEY, KEY2, BAD, OTHER]) {
       for (const b of bodies) expect(b).not.toContain(k);
       expect(JSON.stringify(logs.map((l) => l.map(String)))).not.toContain(k);
     }

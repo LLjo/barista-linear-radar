@@ -1,5 +1,6 @@
 import { db } from "./db.js";
-import type { WorkspaceRecord, WorkspaceStatus } from "./types.js";
+import { isCut, seenEntries } from "./snapshot.js";
+import type { Lists, WorkspaceRecord, WorkspaceStatus } from "./types.js";
 
 export type { WorkspaceRecord };
 
@@ -29,25 +30,45 @@ export function setStatus(id: string, status: WorkspaceStatus, now: string): voi
   db.run("UPDATE linear_radar_workspaces SET status = ?, checked_at = ? WHERE id = ?", [status, now, id]);
 }
 
-export function markPolled(id: string, now: string): void {
-  db.run("UPDATE linear_radar_workspaces SET status = 'ok', checked_at = ?, polled_at = COALESCE(polled_at, ?) WHERE id = ?", [now, now, id]);
-}
-
 export interface FirstSeen {
   workspaceId: string;
   at: string;
   initial: boolean;
 }
 
-/** Record when each issue was first seen. `initial` = from its workspace's first poll: never an event. */
-export function recordSeen(workspaceId: string, issueIds: string[], initial: boolean, now: string): void {
-  db.transaction(() => {
-    for (const id of issueIds) {
-      db.run(
-        "INSERT OR IGNORE INTO linear_radar_first_seen (issue_id, workspace_id, first_seen_at, initial) VALUES (?, ?, ?, ?)",
-        [id, workspaceId, now, initial ? 1 : 0],
-      );
+/**
+ * Fold one good poll into first_seen and mark the workspace polled — only while the row is still the
+ * workspace and the person the poll started for. A Remove, a re-add or another person's key during
+ * the request (up to 20 s) makes this poll stale: it records nothing and answers false.
+ */
+export function recordPoll(w: WorkspaceRecord, lists: Lists, now: string): boolean {
+  return db.transaction(() => {
+    const row = db.get<{ polled_at: string | null; cut: number }>(
+      "SELECT polled_at, cut FROM linear_radar_workspaces WHERE id = ? AND added_at = ? AND viewer_id = ?",
+      [w.id, w.addedAt, w.viewerId],
+    );
+    if (!row) return false;
+    const cut = row.cut === 1 || isCut(lists);
+    for (const e of seenEntries(lists, row.polled_at, cut)) {
+      if (!row.polled_at) {
+        // The first poll wins over any row left behind: what stands now never fires.
+        db.run(
+          `INSERT INTO linear_radar_first_seen (issue_id, workspace_id, first_seen_at, initial) VALUES (?, ?, ?, 1)
+           ON CONFLICT(issue_id) DO UPDATE SET initial = 1`,
+          [e.id, w.id, now],
+        );
+      } else {
+        db.run(
+          "INSERT OR IGNORE INTO linear_radar_first_seen (issue_id, workspace_id, first_seen_at, initial) VALUES (?, ?, ?, ?)",
+          [e.id, w.id, now, e.initial ? 1 : 0],
+        );
+      }
     }
+    db.run(
+      "UPDATE linear_radar_workspaces SET status = 'ok', checked_at = ?, polled_at = COALESCE(polled_at, ?), cut = ? WHERE id = ?",
+      [now, now, cut ? 1 : 0, w.id],
+    );
+    return true;
   });
 }
 

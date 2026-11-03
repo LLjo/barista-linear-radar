@@ -75,3 +75,23 @@ export function nextDelayMs(workspaces: WorkspaceRecord[], live: Map<string, Liv
   }
   return delay;
 }
+
+/**
+ * How each listed issue is recorded in first_seen. On the workspace's first poll everything is
+ * `initial`: old news, never an event. After that, an issue new to us is an event — unless Linear
+ * has ever cut one of this workspace's lists at 50 (`cut`). Then an issue we had not seen may simply
+ * have been past the cut all along, so one created before the first poll stays `initial`: "new only"
+ * errs on the side of starting nothing.
+ */
+export function seenEntries(lists: Lists, polledAt: string | null, cut: boolean): { id: string; initial: boolean }[] {
+  const out: { id: string; initial: boolean }[] = [];
+  for (const k of ["assigned", "mentions", "created"] as const) {
+    for (const r of lists[k]) {
+      out.push({ id: r.id, initial: !polledAt || (cut && Date.parse(r.createdAt) < Date.parse(polledAt)) });
+    }
+  }
+  return out;
+}
+
+/** Linear sent fewer than it has in at least one list. */
+export const isCut = (l: Lists) => l.more.assigned || l.more.mentions || l.more.created;

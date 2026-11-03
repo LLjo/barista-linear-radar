@@ -51,9 +51,9 @@ describe("triggerEvents", () => {
     expect(triggerEvents(snap(), seen(), null)).toEqual([]);
   });
 
-  test("[] with no workspace at all, once booted", () => {
+  test("null, never [], with no workspace at all: that [] would become a rule's baseline", () => {
     const empty = buildSnapshot([], new Map(), { fetchedAt: null, booted: true, now: NOW });
-    expect(triggerEvents(empty, new Map(), null)).toEqual([]);
+    expect(triggerEvents(empty, new Map(), null)).toBeNull();
   });
 
   test("issues from a workspace's first poll (initial) are never served", () => {

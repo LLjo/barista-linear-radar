@@ -62,7 +62,8 @@ const app = new Hono()
     if (!existing.some((w) => w.id === checked.ws.id) && existing.length >= MAX_WORKSPACES) {
       return c.json({ error: `At most ${MAX_WORKSPACES} workspaces. Remove one first.` }, 400);
     }
-    addKey(checked.ws, key);
+    // Another person's key: drop the old person's lists now rather than at the next poll.
+    if (addKey(checked.ws, key).viewerChanged) forget(checked.ws.id);
     void pollFresh().then(() => schedule());
     return c.json(toPublic(getWorkspace(checked.ws.id)!));
   })
@@ -73,7 +74,7 @@ const app = new Hono()
     const checked = await checkKey(key);
     if (!checked.ok) return c.json({ error: checked.error }, checked.status);
     if (checked.ws.id !== id) return c.json({ error: "That key belongs to another workspace." }, 400);
-    replaceKey(checked.ws, key);
+    if (replaceKey(checked.ws, key).viewerChanged) forget(id);
     void pollFresh().then(() => schedule());
     return c.json(toPublic(getWorkspace(id)!));
   })

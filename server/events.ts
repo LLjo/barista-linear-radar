@@ -56,13 +56,15 @@ export function toEvent(r: IssueRow, list: ListId, at: string): AutomationEventI
 }
 
 /**
- * The trigger's events, or null = "not ready": before every workspace's first good poll, and while
+ * The trigger's events, or null = "not ready": with no workspace, before every workspace's first good poll, and while
  * any workspace is rejected, rate limited or failing — its issues are unknown, not absent, and a
  * `[]` on a rule's first poll would become its baseline. Issues first seen in their workspace's
  * first poll (`initial`) are never served. `since` null = the rule's baseline poll: all that stands.
  */
 export function triggerEvents(s: Snapshot, seen: Map<string, FirstSeen>, since: Date | null): AutomationEventInput[] | null {
-  if (!s.ready) return null;
+  // No workspace yet is "I don't know yet" too: a rule's first poll answered [] here would become its
+  // baseline, and every issue of the workspace added later would look new.
+  if (!s.ready || !s.workspaces.length) return null;
   if (s.workspaces.some((w) => w.status !== "ok" || w.lastError || w.pausedUntil)) return null;
   const out: AutomationEventInput[] = [];
   for (const list of ["assigned", "mentions", "created"] as const) {

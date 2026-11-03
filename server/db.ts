@@ -24,7 +24,8 @@ db.exec(`
     api_key TEXT NOT NULL, key_last4 TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'ok',
     added_at TEXT NOT NULL, checked_at TEXT,
-    polled_at TEXT
+    polled_at TEXT,
+    cut INTEGER NOT NULL DEFAULT 0
   );
   CREATE TABLE IF NOT EXISTS linear_radar_settings (
     id INTEGER PRIMARY KEY CHECK (id = 1),

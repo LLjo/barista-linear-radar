@@ -62,7 +62,11 @@ export async function gql<T>(key: string, query: string, variables: Record<strin
   let body: GqlBody<T> | null = null;
   try {
     body = (await res.json()) as GqlBody<T>;
-  } catch {
+  } catch (e) {
+    // The 20 s covers the body too: a body that stalls is a timeout, not "no data".
+    if (e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError")) {
+      throw new LinearError("network", 0, "Linear did not answer within 20 s");
+    }
     body = null;
   }
   const code = codeOf(body);

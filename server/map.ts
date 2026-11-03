@@ -40,6 +40,7 @@ export function toRow(i: GqlIssue, ws: IssueRow["workspace"], unseen: boolean): 
     project: i.project?.name ?? null,
     labels: (i.labels?.nodes ?? []).map((l) => l.name),
     assignee: !i.assignee ? "unassigned" : i.assignee.isMe ? "me" : "someone else",
+    createdAt: i.createdAt,
     updatedAt: i.updatedAt,
     unseen,
   };

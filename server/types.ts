@@ -62,6 +62,7 @@ export interface IssueRow {
   project: string | null;
   labels: string[];
   assignee: "me" | "someone else" | "unassigned";
+  createdAt: string;
   updatedAt: string;
   unseen: boolean;
   /** Mentions list only. */

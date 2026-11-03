@@ -2,8 +2,7 @@ import { LinearError } from "./linear.js";
 import { mapRadar } from "./map.js";
 import type { RadarData } from "./query.js";
 import { buildSnapshot, nextDelayMs, type Live } from "./snapshot.js";
-import type { Settings, Snapshot, Team } from "./types.js";
-import type { WorkspaceRecord } from "./types.js";
+import type { Lists, Settings, Snapshot, Team, WorkspaceRecord } from "./types.js";
 
 /** The team list is a rare query: on a key add (a new workspace) and once a day. */
 export const TEAMS_EVERY_MS = 24 * 60 * 60_000;
@@ -14,9 +13,9 @@ export interface PollerDeps {
   getKey: (workspaceId: string) => string | null;
   fetchRadar: (key: string) => Promise<RadarData>;
   fetchTeams: (key: string) => Promise<{ id: string; key: string; name: string }[]>;
-  markPolled: (workspaceId: string, now: string) => void;
+  /** Record first-seen rows and mark it polled; false = the workspace changed under the poll (stale). */
+  recordPoll: (w: WorkspaceRecord, lists: Lists, now: string) => boolean;
   setRejected: (workspaceId: string, now: string) => void;
-  recordSeen: (workspaceId: string, issueIds: string[], initial: boolean, now: string) => void;
   getSettings: () => Settings;
   /** Tell the UI the snapshot changed. */
   changed: () => void;
@@ -57,10 +56,7 @@ export function createPoller(deps: PollerDeps) {
       const data = await deps.fetchRadar(key);
       const at = new Date(now()).toISOString();
       const lists = mapRadar(data, { id: w.id, name: w.name, urlKey: w.urlKey }, now());
-      const ids = [...lists.assigned, ...lists.mentions, ...lists.created].map((r) => r.id);
-      // The workspace's first good poll ever: what stands now is old news, never an event.
-      deps.recordSeen(w.id, ids, !w.polledAt, at);
-      deps.markPolled(w.id, at);
+      if (!deps.recordPoll(w, lists, at)) return false;
       Object.assign(l, { lists, good: true, error: undefined, lastError: undefined, pausedUntil: undefined });
       await teamsFor(w, key, l);
       return true;

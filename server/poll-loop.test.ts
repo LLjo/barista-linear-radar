@@ -4,6 +4,7 @@ import teams from "./fixtures/teams.json";
 import { LinearError } from "./linear.js";
 import { createPoller, type PollerDeps } from "./poll-loop.js";
 import type { RadarData } from "./query.js";
+import { seenEntries } from "./snapshot.js";
 import type { WorkspaceRecord } from "./types.js";
 
 const NOW = Date.parse("2026-11-03T12:00:00.000Z");
@@ -26,15 +27,18 @@ function world(rows: WorkspaceRecord[], linear: Record<string, () => Promise<Rad
       return linear[key.slice(4)]();
     },
     fetchTeams: async () => teams.data.teams.nodes,
-    markPolled: (id, at) => {
-      const w = rows.find((r) => r.id === id)!;
-      w.status = "ok";
-      w.polledAt ??= at;
+    recordPoll: (w, lists, at) => {
+      const row = rows.find((r) => r.id === w.id && r.addedAt === w.addedAt && r.viewerId === w.viewerId);
+      if (!row) return false;
+      const entries = seenEntries(lists, row.polledAt, false);
+      seen.push({ ws: w.id, ids: entries.map((e) => e.id), initial: entries.every((e) => e.initial) });
+      row.status = "ok";
+      row.polledAt ??= at;
+      return true;
     },
     setRejected: (id) => {
       rows.find((r) => r.id === id)!.status = "rejected";
     },
-    recordSeen: (w, ids, initial) => seen.push({ ws: w, ids, initial }),
     getSettings: () => ({ refreshSec: 300 }),
     changed: () => {},
     now: () => NOW,
