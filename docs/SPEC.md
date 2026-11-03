@@ -44,7 +44,7 @@ server/
   db.ts           openStorage({dir: PLUGIN_DATA_DIR/linear-radar, name: "linear-radar"}); tables below
   keys.ts         the ONLY module that reads api_key: getKey(workspaceId), addKey, replaceKey, removeKey
   workspaces.ts   WorkspacePublic rows (no key field in the type at all)
-  linear.ts       gql(key, query, vars): fetch, error → LinearError {kind, status}; never logs headers/body
+  linear.ts       gql(key, query, vars): fetch with a 20 s timeout, error → LinearError; never logs headers/body
   query.ts        PURE: the query text + buildVars(now) → {assigned, created, subscribed} filters
   map.ts          PURE: response → {assigned, mentions, created} IssueRow[] with unseen + why
   poller.ts       one poll at a time; per workspace one request; last good snapshot in memory
@@ -69,7 +69,7 @@ toggle is a readability check, not a feature.
   take no `Bearer`), `Content-Type: application/json`.
 - **Adding a key** (`POST /workspaces`): validate the shape loosely (20–200 chars, no
   whitespace), then call `query { viewer { id name organization { id name urlKey } } }`.
-  A 401 or `AUTHENTICATION_ERROR` answers 400 "Linear rejected that key." On success, upsert
+  A 401 or `AUTHENTICATION_ERROR` answers 400 "Linear rejected that key. Check that it was copied in full." (the settings mockup's line) On success, upsert
   by organization id: a second key for the same workspace replaces the first.
 - **Storage**: the `linear_radar_workspaces` table below, in the plugin's SQLite file under
   `PLUGIN_DATA_DIR`. `chmod 600` the db file after opening it. No encryption at rest: the key
@@ -78,7 +78,7 @@ toggle is a readability check, not a feature.
   `keyLast4`. Only `keys.ts` selects the `api_key` column; every other query names its columns.
   A test calls every route and asserts the fixture key appears in no response body.
 - **Never in a log.** `linear.ts` never logs a request, headers or the raw body. Errors become
-  `LinearError {kind: "auth" | "rate" | "http" | "graphql", status, message}`, where `message`
+  `LinearError {kind: "auth" | "rate" | "http" | "graphql" | "network", status, message}`, where `message`
   comes from Linear's `errors[].message`, never from our request. zod errors on key routes
   answer a fixed message and do not echo the input. A test spies on `console.*` while adding a
   key, polling, and failing auth, and asserts the key never appears.
@@ -180,6 +180,10 @@ interface IssueRow {
 
 - State chips key on `state.type`. Linear's In Review is a `started` state, so the build maps
   `state.name` matching `/review/i` to the `review` chip colour, as the mockups show it.
+- **App link**: `issue.url` with `https://linear.app/` replaced by `linear://`, which opens
+  Linear's desktop app (the mockups' `data.js` builds the same link from workspace and
+  identifier). Check once on a machine with the app; if it does not open, drop the App link
+  everywhere rather than guessing another scheme.
 - **Order** in every list: unseen first, then `updatedAt` descending.
 
 ### Unseen comes from Linear notifications
@@ -198,6 +202,10 @@ and one poll runs at a time. The plugin keeps the last good result per workspace
 `subjects.changed` after each poll, and the UI re-reads `/issues` when it fires.
 
 - `refreshSec` is 60, 300 or 900. Default 300.
+- Every request uses `AbortSignal.timeout(20_000)`. A timeout, DNS failure or reset is a
+  `network` error, handled like `http`: the workspace keeps its last good lists, is marked
+  failing, and counts as not ready for the trigger (`null`). One hung workspace must never
+  stall the others or the next poll.
 - Rate limits: on HTTP 429 or a `RATELIMITED` error code, pause that workspace until the
   reset time in Linear's `X-RateLimit-*-Reset` headers (5 min if none). Show "rate limited ·
   last sync …" the way PR Radar does. Never retry in a loop.
@@ -368,7 +376,7 @@ never calls Linear, so an Automations tick costs no Linear quota.
    repo. It lands under `PLUGINS_INSTALL_DIR`, `/health` is ok, and "Linear Radar" shows in
    ⚙ and Ctrl K.
 2. Pasting a valid key on the settings page adds the workspace with its name and `••••last4`.
-   A bad key shows "Linear rejected that key." and is not stored.
+   A bad key shows "Linear rejected that key. Check that it was copied in full." and is not stored.
 3. The key never appears in any route's response or in the plugin's logs. Tests prove it, and
    so does a manual grep of the plugin log after a session.
 4. The three lists match Linear for the same user: Assigned matches Linear's "My issues →
@@ -377,7 +385,7 @@ never calls Linear, so an Automations tick costs no Linear quota.
 5. Unseen issues come first, carry the dot, and match the unread items in Linear's inbox.
    Reading one in Linear clears it on the next poll.
 6. Priority, state and cycle badges match each issue. Open goes to `issue.url` in a new tab,
-   and App goes to the `linear://` deep link.
+   and App goes to the desktop deep link (`issue.url` with `https://linear.app/` replaced by `linear://`).
 7. The workspace and team filters and the refresh interval work and persist (filters in
    localStorage, interval across a restart).
 8. The page matches the picked mockup, with no element the mockup lacks.
