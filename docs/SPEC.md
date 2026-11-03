@@ -297,7 +297,7 @@ never calls Linear, so an Automations tick costs no Linear quota.
   url: issue.url,
   at: first_seen_at,                      // when the plugin first saw it in a list
   fields: { team: "ENG", label: ["bug", "e2e"], priority: "high", assignee: "me",
-            project: "Payments v2", workspace: "acme", list: "assigned" },  // "" for a missing project
+            project: "Payments v2", workspace: "acme", list: "assigned" },  // label [] and project "" when missing
   start: { title: `Linear ${identifier}: ${title}`, body: "…" }
 }
 ```
@@ -305,9 +305,13 @@ never calls Linear, so an Automations tick costs no Linear quota.
 - **Key**: the issue UUID, which Automations namespaces as `linear-radar:new-issue-for-me:<id>`.
   The identifier (`ENG-412`) is not a stable key, because it changes when an issue moves team.
   One key per issue means a rule starts at most one item per issue, ever.
-- **`label`** is a `string[]`, so the manifest declares it `multi: true` (the contract
-  requires every array field to be declared, in whatever spelling the plugins notes give).
-  A rule's label filter matches when any one label matches.
+- **Field semantics come from the contract** (`@barista/types/automation-triggers`): a
+  `string` filter is a case-insensitive contains, an `enum` filter must equal one of its
+  `options`, and an empty filter matches anything.
+- **`label`** is a `string[]`, so the manifest declares it `multi: true`. The contract allows
+  `multi` only on string and enum fields. A label filter matches when any one label contains
+  it. An issue with no labels sends `label: []`, and an empty list never matches a label
+  filter that is set.
 - **What fires, per the #1429 contract:** Automations runs a rule's field filters *before* it
   marks an event seen, so an event that does not match yet can fire later, once it does (it
   gets relabelled or reassigned). The exception is the baseline: a rule's first run records
@@ -315,17 +319,24 @@ never calls Linear, so an Automations tick costs no Linear quota.
   An issue already in your lists when the rule was created therefore never starts anything,
   even after a relabel. Only an issue that enters your lists after the rule's first run can
   fire.
-- **`since`**: return the events with `at >= since`. Automations' own baseline decides what is
-  new for each rule.
+- **Serve it through the SDK**: `automationEvents({"new-issue-for-me": handler})` from
+  `@barista/plugin-sdk/automations`. The SDK checks the trigger id and `since`, validates the
+  events, and answers exactly `{events: [...]}`. The contract treats any other body as "no
+  data this tick", so do not hand-roll the route.
+- **`since`** is `null` on a rule's first poll. That poll is the baseline: return every event
+  that stands now. After that, `since` is the rule's baseline time; return the events with
+  `at >= since`.
 - **Don't fire for old issues.** When a workspace is polled for the first time (a fresh
   install, a key added later), every issue in that poll gets a `first_seen` row with
   `initial = 1`, and those rows are **never** served. Without this, adding a second workspace
   to a running rule would start an item for every issue already in it. Rows persist across
   restarts, so a restart does not re-time anything.
-- **Until `snapshot.ready`, answer 503 `{error: "not ready"}`, not an empty list**, and the
-  same while a workspace is rejected or rate-limited. An empty list on boot would become a
-  rule's baseline, and the first real poll would then look like a flood of new issues.
-  Automations must treat a non-2xx answer as "no data this tick", not as an empty baseline.
+- **Return `null` until `snapshot.ready`, never `[]`.** The SDK turns `null` into a 503
+  "not ready", and Automations reads that as "no data this tick". Return `null` too while
+  any workspace is rejected or rate-limited, because its issues are unknown, not absent.
+  `[]` means "nothing stands now". On a rule's first poll that `[]` becomes its baseline, so
+  every existing issue would then look new and start an item. Return `[]` only after a good
+  poll that really found no issues.
 - **`start.body`** is markdown:
 
   ```
@@ -374,8 +385,9 @@ never calls Linear, so an Automations tick costs no Linear quota.
    rule lists nothing for the existing issues. A new issue assigned to you then shows up as
    one would-start, and only once across ticks. Adding a second workspace starts nothing.
 10. `bun test` passes with tests for `query.ts` (filter variables), `map.ts` (list
-    precedence, unseen/snooze, why, state mapping), `events.ts` (key, fields, `initial`
-    rows skipped, 503 before ready, body quoting and cut), and the key-leak tests. Linear is
+    precedence, unseen/snooze, why, state mapping), `events.ts` (key, fields, `label: []`, `initial`
+    rows skipped, `null` (never `[]`) before ready or while a workspace is rejected, body
+    quoting and cut), and the key-leak tests. Linear is
     mocked by fixtures. `tsc -p server/tsconfig.json` is clean and `cd ui && bun run build`
     succeeds.
 11. README, LICENSE (MIT) and a clean secret scan: `git log -p | grep -iE 'token|secret|api[_-]?key'`
