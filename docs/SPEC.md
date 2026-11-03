@@ -10,10 +10,10 @@ It lives only in `LLjo/barista-linear-radar` and installs through Plugins → In
 **Barista's own code does not change.** It is modelled on PR Radar (`LLjo/barista-pr-radar`,
 #1237). Where this spec is silent, do what PR Radar does.
 
-> **Chosen layout: not picked yet.** The human picks A, B or C on Barista issue #1430, and
-> this line is updated to name the build target. The mockups are in `docs/design/`:
-> `index.html` shows all three side by side, `mockup-a/b/c.html` each one full size, and
-> `settings.html` the settings page they all share.
+> **Chosen layout: C, inbox tabs**, the human's pick on Barista issue #1430 (2026-11-03).
+> The build target is **`docs/design/mockup-c.html`** plus the shared `settings.html`. Under
+> "Controls that only some mockups have", build only the C controls. `mockup-a.html` and
+> `mockup-b.html` stay as the record of the alternatives, and `index.html` shows all three.
 
 The repo will be made **public** later, by the human: never change its visibility yourself. Nothing in it may be a real key, token, workspace
 or internal URL, including in git history. Fixtures use invented values, like the mockups'
