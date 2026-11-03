@@ -4,7 +4,7 @@ import teams from "./fixtures/teams.json";
 import { LinearError } from "./linear.js";
 import { createPoller, type PollerDeps } from "./poll-loop.js";
 import type { RadarData } from "./query.js";
-import { seenEntries } from "./snapshot.js";
+import { nextDelayMs, seenEntries } from "./snapshot.js";
 import type { WorkspaceRecord } from "./types.js";
 
 const NOW = Date.parse("2026-11-03T12:00:00.000Z");
@@ -36,8 +36,8 @@ function world(rows: WorkspaceRecord[], linear: Record<string, () => Promise<Rad
       row.polledAt ??= at;
       return true;
     },
-    setRejected: (id) => {
-      rows.find((r) => r.id === id)!.status = "rejected";
+    setRejected: (w) => {
+      rows.find((r) => r.id === w.id)!.status = "rejected";
     },
     getSettings: () => ({ refreshSec: 300 }),
     changed: () => {},
@@ -134,6 +134,42 @@ describe("poll loop", () => {
     release();
     expect(await one).toBe(await two);
     expect(w.calls.length).toBe(1);
+  });
+
+  test("a rejected key is not sent again, and does not speed the loop up", async () => {
+    const w = world([ws("a", { status: "rejected" }), ws("b")], { a: ok, b: ok });
+    const p = createPoller(w.deps);
+    await p.poll();
+    expect(w.calls).toEqual(["key-b"]);
+    expect(nextDelayMs(w.deps.listWorkspaces(), new Map([["b", { good: true }]]), 300, NOW)).toBe(300_000);
+  });
+
+  test("a poll that throws does not kill the loop; stop() stops re-arming", async () => {
+    const w = world([ws("a")], { a: ok });
+    const fired: (() => void)[] = [];
+    w.deps.setTimer = ((fn: () => void) => {
+      fired.push(fn);
+      return { unref() {} } as unknown as ReturnType<typeof setTimeout>;
+    }) as PollerDeps["setTimer"];
+    let boom = true;
+    w.deps.listWorkspaces = () => {
+      if (boom) throw new Error("db closed");
+      return [];
+    };
+    const p = createPoller(w.deps);
+    const warn = quiet();
+    boom = true;
+    p.schedule(1);
+    boom = false;
+    expect(fired.length).toBe(1);
+    boom = true;
+    await fired[0]();
+    warn.mockRestore();
+    boom = false;
+    expect(fired.length).toBe(2); // re-armed after the failure
+    p.stop();
+    p.schedule(1);
+    expect(fired.length).toBe(2);
   });
 
   test("a removed workspace drops out of the snapshot at once", async () => {

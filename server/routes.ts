@@ -3,9 +3,9 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { automationEvents } from "@barista/plugin-sdk/automations";
 import { TRIGGER_ID, triggerEvents } from "./events.js";
-import { addKey, removeKey, replaceKey, type NewWorkspace } from "./keys.js";
+import { addKey, removeKey, type NewWorkspace } from "./keys.js";
 import { gql, LinearError } from "./linear.js";
-import { forget, getSnapshot, poll, pollFresh, schedule } from "./poller.js";
+import { changed, forget, getSnapshot, poll, refreshNow } from "./poller.js";
 import { VIEWER_QUERY, type Viewer } from "./query.js";
 import { getSettings, saveSettings } from "./settings.js";
 import { REFRESH_CHOICES, type IssueRow, type SettingsReply, type Snapshot } from "./types.js";
@@ -47,11 +47,17 @@ const forPage = (s: Snapshot): Snapshot => ({ ...s, assigned: s.assigned.map(lea
 
 const settingsReply = (): SettingsReply => ({ ...getSettings(), workspaces: getSnapshot().workspaces });
 
+/** The trigger reads the last poll: no Linear request, no quota. */
+function eventsNow(since: Date | null) {
+  const s = getSnapshot();
+  return triggerEvents(s, firstSeen([...s.assigned, ...s.mentions, ...s.created].map((r) => r.id)), since);
+}
+
 const app = new Hono()
   .get("/settings", (c) => c.json(settingsReply()))
   .put("/settings", settingsBody, (c) => {
     const saved = saveSettings(c.req.valid("json"));
-    void pollFresh().then(() => schedule());
+    refreshNow();
     return c.json(saved);
   })
   .post("/workspaces", keyBody, async (c) => {
@@ -64,7 +70,7 @@ const app = new Hono()
     }
     // Another person's key: drop the old person's lists now rather than at the next poll.
     if (addKey(checked.ws, key).viewerChanged) forget(checked.ws.id);
-    void pollFresh().then(() => schedule());
+    refreshNow();
     return c.json(toPublic(getWorkspace(checked.ws.id)!));
   })
   .put("/workspaces/:id/key", keyBody, async (c) => {
@@ -74,21 +80,22 @@ const app = new Hono()
     const checked = await checkKey(key);
     if (!checked.ok) return c.json({ error: checked.error }, checked.status);
     if (checked.ws.id !== id) return c.json({ error: "That key belongs to another workspace." }, 400);
-    if (replaceKey(checked.ws, key).viewerChanged) forget(id);
-    void pollFresh().then(() => schedule());
+    if (addKey(checked.ws, key).viewerChanged) forget(id);
+    refreshNow();
     return c.json(toPublic(getWorkspace(id)!));
   })
   .delete("/workspaces/:id", (c) => {
     const id = c.req.param("id");
     if (!removeKey(id)) return c.json({ error: "No such workspace" }, 404);
     forget(id);
+    changed();
     return c.json({ ok: true as const });
   })
   .get("/issues", (c) => c.json(forPage(getSnapshot())))
   .post("/refresh", async (c) => c.json(forPage(await poll())))
   .get("/count", (c) => c.json({ unseen: getSnapshot().unseen }))
   // The SDK route: it checks the trigger id and `since`, validates the events, and answers 503 for null.
-  .route("/", automationEvents({ [TRIGGER_ID]: ({ since }) => triggerEvents(getSnapshot(), firstSeen(), since) }));
+  .route("/", automationEvents({ [TRIGGER_ID]: ({ since }) => eventsNow(since) }));
 
 export type AppType = typeof app;
 export default app;

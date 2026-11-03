@@ -65,13 +65,14 @@ export function buildSnapshot(
   };
 }
 
-/** Wait before the next poll: the interval, the end of the soonest rate-limit pause, or a quick boot retry. */
+/** Wait before the next poll: the interval, the end of the soonest rate-limit pause, or a quick boot retry (not for a rejected key). */
 export function nextDelayMs(workspaces: WorkspaceRecord[], live: Map<string, Live>, refreshSec: number, now: number): number {
   let delay = refreshSec * 1000;
   for (const w of workspaces) {
     const l = live.get(w.id);
     if (l?.pausedUntil && l.pausedUntil > now) delay = Math.min(delay, l.pausedUntil - now);
-    else if (!l?.good) delay = Math.min(delay, BOOT_RETRY_MS);
+    // A rejected key waits for Replace; it never speeds the loop up.
+    else if (!l?.good && w.status !== "rejected") delay = Math.min(delay, BOOT_RETRY_MS);
   }
   return delay;
 }

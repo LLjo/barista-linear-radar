@@ -6,6 +6,7 @@ import type { Lists, Settings, Snapshot, Team, WorkspaceRecord } from "./types.j
 
 /** The team list is a rare query: on a key add (a new workspace) and once a day. */
 export const TEAMS_EVERY_MS = 24 * 60 * 60_000;
+const FALLBACK_DELAY_MS = 300_000;
 
 /** Everything the poll loop touches outside itself; poller.ts wires the real ones. */
 export interface PollerDeps {
@@ -15,7 +16,8 @@ export interface PollerDeps {
   fetchTeams: (key: string) => Promise<{ id: string; key: string; name: string }[]>;
   /** Record first-seen rows and mark it polled; false = the workspace changed under the poll (stale). */
   recordPoll: (w: WorkspaceRecord, lists: Lists, now: string) => boolean;
-  setRejected: (workspaceId: string, now: string) => void;
+  /** Mark the key rejected — only while it is still the key the poll used. */
+  setRejected: (w: WorkspaceRecord, now: string) => void;
   getSettings: () => Settings;
   /** Tell the UI the snapshot changed. */
   changed: () => void;
@@ -32,6 +34,7 @@ export function createPoller(deps: PollerDeps) {
   let inFlight: Promise<Snapshot> | null = null;
   let rerun: Promise<Snapshot> | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let stopped = false;
 
   async function teamsFor(w: WorkspaceRecord, key: string, l: Live): Promise<void> {
     if (l.teamsAt && now() - l.teamsAt < TEAMS_EVERY_MS) return;
@@ -50,6 +53,8 @@ export function createPoller(deps: PollerDeps) {
     const l: Live = live.get(w.id) ?? { good: false };
     live.set(w.id, l);
     if (l.pausedUntil && l.pausedUntil > now()) return false;
+    // A rejected key is not sent again until it is replaced (Replace sets the status back to ok).
+    if (w.status === "rejected") return false;
     const key = deps.getKey(w.id);
     if (!key) return false;
     try {
@@ -65,7 +70,7 @@ export function createPoller(deps: PollerDeps) {
       l.error = err.kind;
       l.lastError = err.kind === "rate" ? "Rate limited by Linear" : err.message;
       if (err.kind === "rate") l.pausedUntil = err.retryAt;
-      if (err.kind === "auth") deps.setRejected(w.id, new Date(now()).toISOString());
+      if (err.kind === "auth") deps.setRejected(w, new Date(now()).toISOString());
       console.warn(`[linear-radar] ${w.urlKey}: ${err.kind} ${err.message}`);
       return false;
     }
@@ -105,13 +110,40 @@ export function createPoller(deps: PollerDeps) {
     return rerun;
   }
 
-  function schedule(delayMs = nextDelayMs(deps.listWorkspaces(), live, deps.getSettings().refreshSec, now())): void {
+  /** The next wait; a failure reading it falls back to the default interval rather than ending the loop. */
+  function delay(): number {
+    try {
+      return nextDelayMs(deps.listWorkspaces(), live, deps.getSettings().refreshSec, now());
+    } catch {
+      return FALLBACK_DELAY_MS;
+    }
+  }
+
+  /** Poll, never rejecting: a failed poll is logged and the loop goes on. */
+  async function safePoll(): Promise<void> {
+    try {
+      await poll();
+    } catch (e) {
+      console.warn("[linear-radar] poll failed:", e instanceof Error ? e.message : "unexpected error");
+    }
+  }
+
+  function schedule(delayMs?: number): void {
+    // After stop() (shutdown), an in-flight poll must not re-arm the timer against a closed DB.
+    if (stopped) return;
     if (timer) clearTimeout(timer);
     timer = setTimer(async () => {
-      await poll();
+      await safePoll();
       schedule();
-    }, delayMs);
+    }, delayMs ?? delay());
     timer.unref?.();
+  }
+
+  /** A settings change or an added key: poll with it now, then re-arm the timer. Never rejects. */
+  function refreshNow(): void {
+    void pollFresh()
+      .catch((e) => console.warn("[linear-radar] poll failed:", e instanceof Error ? e.message : "unexpected error"))
+      .then(() => schedule());
   }
 
   /** Built on read: a removed or added workspace shows at once, not at the next poll. */
@@ -123,16 +155,20 @@ export function createPoller(deps: PollerDeps) {
     getSnapshot,
     poll,
     pollFresh,
+    refreshNow,
     schedule,
+    /** Tell the UI the snapshot changed without polling (a removed workspace). */
+    changed: () => deps.changed(),
     /** A removed workspace: forget its lists now. */
     forget(id: string): void {
       live.delete(id);
     },
     async start(): Promise<void> {
-      await poll();
+      await safePoll();
       schedule();
     },
     stop(): void {
+      stopped = true;
       if (timer) clearTimeout(timer);
       timer = null;
     },

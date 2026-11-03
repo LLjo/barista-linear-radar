@@ -38,10 +38,6 @@ export function addKey(w: NewWorkspace, key: string, now = new Date().toISOStrin
   return { viewerChanged: !!before && before.viewer_id !== w.viewerId };
 }
 
-export function replaceKey(w: NewWorkspace, key: string, now = new Date().toISOString()): { viewerChanged: boolean } {
-  return addKey(w, key, now);
-}
-
 /** Deletes the key and the workspace's first-seen rows. */
 export function removeKey(workspaceId: string): boolean {
   return db.transaction(() => {

@@ -33,11 +33,11 @@
 	{#if teams.length}
 		<div>
 			<h4>Teams</h4>
-			{#each teams as t (t.key)}
+			{#each teams as t (t.id)}
 				<label title={t.name}>
-					<input type="checkbox" checked={!filters.offTeams.includes(t.key)}
-						onchange={(e) => (filters.offTeams = toggle(filters.offTeams, t.key, e.currentTarget.checked))} />
-					{t.key}<span class="count">{t.count}</span>
+					<input type="checkbox" checked={!filters.offTeams.includes(t.id)}
+						onchange={(e) => (filters.offTeams = toggle(filters.offTeams, t.id, e.currentTarget.checked))} />
+					{t.label}<span class="count">{t.count}</span>
 				</label>
 			{/each}
 		</div>

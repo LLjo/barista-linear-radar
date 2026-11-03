@@ -5,7 +5,7 @@ import { createPoller } from "./poll-loop.js";
 import { buildVars, RADAR_QUERY, TEAMS_QUERY, type RadarData, type TeamsData } from "./query.js";
 import { getSettings } from "./settings.js";
 import { subjects } from "./subjects.js";
-import { listWorkspaces, recordPoll, setStatus } from "./workspaces.js";
+import { listWorkspaces, recordPoll, setRejected } from "./workspaces.js";
 
 // The query's cost against Linear's complexity limit (SPEC "Data"): logged once per boot to measure it.
 let complexityLogged = false;
@@ -22,12 +22,12 @@ const poller = createPoller({
     return r.data;
   },
   fetchTeams: async (key) => (await gql<TeamsData>(key, TEAMS_QUERY)).data.teams.nodes,
-  setRejected: (id, now) => setStatus(id, "rejected", now),
+  setRejected,
   recordPoll,
   getSettings,
   changed: () => nats.publish(subjects.changed, undefined),
 });
 
-export const { getSnapshot, poll, pollFresh, schedule, forget } = poller;
+export const { getSnapshot, poll, refreshNow, forget, changed } = poller;
 export const startPoller = poller.start;
 export const stopPoller = poller.stop;

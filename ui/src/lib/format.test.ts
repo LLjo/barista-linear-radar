@@ -7,7 +7,7 @@ const row = (o: Partial<IssueRow> & { id: string }): IssueRow => ({
   identifier: o.id, title: "t", url: `https://linear.app/acme/issue/${o.id}/t`,
   workspace: { id: "org-acme", name: "Acme", urlKey: "acme" }, team: { key: "ENG", name: "Engineering" },
   priority: 3, state: { name: "Todo", type: "unstarted" }, cycle: null, project: null, labels: [],
-  assignee: "me", updatedAt: "2026-11-03T00:00:00.000Z", unseen: false, ...o,
+  assignee: "me", createdAt: "2026-11-01T00:00:00.000Z", updatedAt: "2026-11-03T00:00:00.000Z", unseen: false, ...o,
 });
 const ws = (o: Partial<WorkspacePublic> = {}): WorkspacePublic => ({
   id: "org-acme", name: "Acme", urlKey: "acme", viewerName: "Alex Doe", keyLast4: "abcd", status: "ok",
@@ -36,7 +36,8 @@ describe("filters", () => {
     const ids = (f: Partial<typeof DEFAULT_FILTERS>) => applyFilters(rows, { ...DEFAULT_FILTERS, ...f }).map((r) => r.id);
     expect(ids({})).toEqual(["a", "b", "c"]);
     expect(ids({ offWorkspaces: ["org-nw"] })).toEqual(["a", "b"]);
-    expect(ids({ offTeams: ["DES"] })).toEqual(["a", "c"]);
+    expect(ids({ offTeams: ["org-acme:DES"] })).toEqual(["a", "c"]);
+    expect(ids({ offTeams: ["org-nw:ENG"] })).toEqual(["a", "b"]);
     expect(ids({ cycle: true })).toEqual(["a"]);
     expect(ids({ urgent: true })).toEqual(["a", "c"]);
   });
@@ -51,7 +52,16 @@ describe("groups", () => {
 
   test("team counts cover every list and keep a switched-off team listed", () => {
     const s = snap({ assigned: [row({ id: "1" })], created: [row({ id: "2" })], teams: [{ workspaceId: "org-acme", key: "ENG", name: "Engineering" }] });
-    expect(teamCounts(s, ["OPS"])).toEqual([{ key: "ENG", name: "Engineering", count: 2 }, { key: "OPS", name: "OPS", count: 0 }]);
+    expect(teamCounts(s, ["org-acme:OPS"])).toEqual([
+      { id: "org-acme:ENG", label: "ENG", name: "Engineering", count: 2 },
+      { id: "org-acme:OPS", label: "OPS", name: "OPS", count: 0 },
+    ]);
+  });
+
+  test("the same team key in two workspaces is two teams, each named by workspace", () => {
+    const nw = { id: "org-nw", name: "Northwind", urlKey: "nw" };
+    const s = snap({ workspaces: [ws(), ws({ id: "org-nw", name: "Northwind" })], assigned: [row({ id: "1" }), row({ id: "2", workspace: nw })] });
+    expect(teamCounts(s, []).map((t) => t.label)).toEqual(["ENG · Acme", "ENG · Northwind"]);
   });
 });
 

@@ -8,7 +8,8 @@ export const LISTS: { id: ListId; label: string }[] = [
   { id: "created", label: "Created by me" },
 ];
 
-/** Client-side filters over the snapshot. Off-lists, so a new workspace or team shows by default. */
+/** Client-side filters over the snapshot. Off-lists, so a new workspace or team shows by default.
+ *  A team is `<workspace id>:<team key>`: two workspaces can both have an ENG. */
 export interface Filters {
   tab: ListId;
   offWorkspaces: string[];
@@ -40,34 +41,42 @@ export function applyFilters(rows: IssueRow[], f: Filters): IssueRow[] {
   return rows.filter(
     (r) =>
       !f.offWorkspaces.includes(r.workspace.id) &&
-      !f.offTeams.includes(r.team.key) &&
+      !f.offTeams.includes(teamId(r)) &&
       (!f.cycle || !!r.cycle?.active) &&
       (!f.urgent || r.priority === 1 || r.priority === 2),
   );
 }
 
+export const teamId = (r: Pick<IssueRow, "workspace" | "team">) => `${r.workspace.id}:${r.team.key}`;
+
 export const allRows = (s: Snapshot | null): IssueRow[] => (s ? [...s.assigned, ...s.mentions, ...s.created] : []);
 
 /** Inside a tab: "Unseen" first, then one group per team (in first-seen order, rows keep theirs). */
-export function groups(rows: IssueRow[]): { unseen: IssueRow[]; teams: { key: string; rows: IssueRow[] }[] } {
+export function groups(rows: IssueRow[]): { unseen: IssueRow[]; teams: { id: string; key: string; rows: IssueRow[] }[] } {
   const unseen = rows.filter((r) => r.unseen);
-  const teams: { key: string; rows: IssueRow[] }[] = [];
+  const teams: { id: string; key: string; rows: IssueRow[] }[] = [];
   for (const r of rows) {
     if (r.unseen) continue;
-    let g = teams.find((t) => t.key === r.team.key);
-    if (!g) teams.push((g = { key: r.team.key, rows: [] }));
+    let g = teams.find((t) => t.id === teamId(r));
+    if (!g) teams.push((g = { id: teamId(r), key: r.team.key, rows: [] }));
     g.rows.push(r);
   }
   return { unseen, teams };
 }
 
-/** The side panel's team list: teams with an issue, plus any switched off (so they can be switched back). */
-export function teamCounts(s: Snapshot | null, off: string[]): { key: string; name: string; count: number }[] {
+/** The side panel's team list: teams with an issue, plus any switched off (so they can be switched back).
+ *  With several workspaces, each label names its workspace too. */
+export function teamCounts(s: Snapshot | null, off: string[]): { id: string; label: string; name: string; count: number }[] {
   const counts = new Map<string, number>();
-  for (const r of allRows(s)) counts.set(r.team.key, (counts.get(r.team.key) ?? 0) + 1);
-  const name = (k: string) => s?.teams.find((t) => t.key === k)?.name ?? k;
-  const keys = [...new Set([...counts.keys(), ...off])].filter(Boolean).sort();
-  return keys.map((key) => ({ key, name: name(key), count: counts.get(key) ?? 0 }));
+  for (const r of allRows(s)) counts.set(teamId(r), (counts.get(teamId(r)) ?? 0) + 1);
+  const many = (s?.workspaces.length ?? 0) > 1;
+  const ids = [...new Set([...counts.keys(), ...off])].filter((id) => id.includes(":")).sort();
+  return ids.map((id) => {
+    const [ws, key] = [id.slice(0, id.indexOf(":")), id.slice(id.indexOf(":") + 1)];
+    const name = s?.teams.find((t) => t.workspaceId === ws && t.key === key)?.name ?? key;
+    const wsName = s?.workspaces.find((w) => w.id === ws)?.name;
+    return { id, label: many && wsName ? `${key} · ${wsName}` : key, name, count: counts.get(id) ?? 0 };
+  });
 }
 
 export function workspaceCounts(s: Snapshot | null): { ws: WorkspacePublic; count: number }[] {

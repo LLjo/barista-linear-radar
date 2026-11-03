@@ -1,6 +1,6 @@
 import { db } from "./db.js";
 import { isCut, seenEntries } from "./snapshot.js";
-import type { Lists, WorkspaceRecord, WorkspaceStatus } from "./types.js";
+import type { Lists, WorkspaceRecord } from "./types.js";
 
 export type { WorkspaceRecord };
 
@@ -26,8 +26,12 @@ export function getWorkspace(id: string): WorkspaceRecord | null {
   return r ? fromRow(r) : null;
 }
 
-export function setStatus(id: string, status: WorkspaceStatus, now: string): void {
-  db.run("UPDATE linear_radar_workspaces SET status = ?, checked_at = ? WHERE id = ?", [status, now, id]);
+/** Mark the key rejected, unless it was replaced or removed while the poll ran. */
+export function setRejected(w: WorkspaceRecord, now: string): void {
+  db.run(
+    "UPDATE linear_radar_workspaces SET status = 'rejected', checked_at = ? WHERE id = ? AND added_at = ? AND viewer_id = ? AND key_last4 = ?",
+    [now, w.id, w.addedAt, w.viewerId, w.keyLast4],
+  );
 }
 
 export interface FirstSeen {
@@ -72,9 +76,11 @@ export function recordPoll(w: WorkspaceRecord, lists: Lists, now: string): boole
   });
 }
 
-export function firstSeen(): Map<string, FirstSeen> {
+/** The first-seen rows of these issues (the ones in the snapshot), not the whole table. */
+export function firstSeen(issueIds: string[]): Map<string, FirstSeen> {
   const rows = db.query<{ issue_id: string; workspace_id: string; first_seen_at: string; initial: number }>(
-    "SELECT issue_id, workspace_id, first_seen_at, initial FROM linear_radar_first_seen",
+    "SELECT issue_id, workspace_id, first_seen_at, initial FROM linear_radar_first_seen WHERE issue_id IN (SELECT value FROM json_each(?))",
+    [JSON.stringify(issueIds)],
   );
   return new Map(rows.map((r) => [r.issue_id, { workspaceId: r.workspace_id, at: r.first_seen_at, initial: r.initial === 1 }]));
 }

@@ -113,7 +113,7 @@
 					{#if grouped.unseen.length}
 						<div class="grp"><h3 class="new">● Unseen</h3>{#each grouped.unseen as i (i.id)}<IssueRow issue={i} {now} />{/each}</div>
 					{/if}
-					{#each grouped.teams as g (g.key)}
+					{#each grouped.teams as g (g.id)}
 						<div class="grp"><h3>{g.key}</h3>{#each g.rows as i (i.id)}<IssueRow issue={i} {now} />{/each}</div>
 					{/each}
 				</main>
