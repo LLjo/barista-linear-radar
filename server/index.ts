@@ -5,9 +5,10 @@ import { serveTriggers } from "@barista/plugin-sdk/triggers";
 import routes, { triggerHandlers } from "./routes.js";
 
 plugin.server.registerRoutes(routes);
-serveTriggers(triggerHandlers);
+const triggers = serveTriggers(triggerHandlers);
 plugin.server.registerHealthCheck(async () => ({ ok: db.health() }));
 plugin.server.registerShutdown(() => {
+  triggers.stop();
   stopPoller();
   closeDb();
 });
