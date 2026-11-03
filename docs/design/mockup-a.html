@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Linear Radar — A · compact list</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+	/* A: one column, the three lists stacked as collapsible sections, ONE line per issue.
+	   Densest option: the most issues on screen, chips trail the title. */
+	section { margin-top: 14px; }
+	section h2 { display: flex; align-items: baseline; gap: 8px; margin: 0 0 4px; font: 600 var(--t-m) var(--sans); color: var(--ink-2); cursor: pointer; }
+	section h2 .n { min-width: 18px; padding: 0 6px; border-radius: var(--r-pill); background: var(--raised); font: 500 var(--t-xs)/18px var(--mono); text-align: center; }
+	section h2 .caret { color: var(--ink-3); font-size: var(--t-xs); width: 10px; }
+	.row { display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: var(--r-sm); font-size: var(--t-m); }
+	.row + .row { border-top: 1px solid var(--line); border-radius: 0; }
+	.row:hover { background: var(--hover); }
+	.row .ident { width: 62px; flex: none; }
+	.row .title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.row .meta { display: flex; gap: 6px; align-items: center; flex: none; }
+	.row .age { width: 30px; text-align: right; color: var(--ink-3); font: var(--t-xs) var(--mono); }
+	.row .why { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+</style>
+<script src="data.js"></script><script src="toolbar.js"></script>
+</head>
+<body><div class="stage"><div class="page" id="page"></div></div>
+<button class="theme-toggle" onclick="flip()">light / dark</button>
+<script>
+	themeFromQuery();
+	const row = (i) => `<div class="row ${i.unseen ? "unseen" : "seen"}">${dot(i)}${prio(i.prio)}
+		<a class="ident" href="${url(i)}" target="_blank" rel="noopener">${i.key}</a>
+		<a class="title" href="${url(i)}" target="_blank" rel="noopener">${esc(i.title)}</a>
+		<span class="meta">${whyText(i)}${i.labels.map((l) => `<span class="chip lbl">${esc(l)}</span>`).join("")}${stateChip(i)}${cycleChip(i)}</span>
+		<span class="age">${i.age}</span>${links(i)}</div>`;
+	document.getElementById("page").innerHTML = toolbar() + LISTS.map((l, k) => `<section>
+		<h2><span class="caret">${k === 2 ? "▸" : "▾"}</span>${l.label} <span class="n">${listOf(l.id).length}</span>${unseenIn(l.id) ? `<span class="new-n">${unseenIn(l.id)} new</span>` : ""}</h2>
+		${k === 2 ? "" : listOf(l.id).map(row).join("")}</section>`).join("");
+</script>
+</body>
+</html>

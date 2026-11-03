@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Linear Radar — pick a mockup</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+	body { padding: 14px; }
+	.top { display: flex; align-items: baseline; gap: 14px; margin-bottom: 10px; }
+	.top h1 { margin: 0; font: 600 var(--t-l) var(--display); }
+	.top span { color: var(--ink-3); font-size: var(--t-s); }
+	.top .theme { margin-left: auto; }
+	.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; height: calc(100vh - 70px); }
+	figure { margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+	figcaption { font-size: var(--t-s); color: var(--ink-2); display: flex; gap: 8px; }
+	figcaption a { margin-left: auto; }
+	.frame { flex: 1; overflow: hidden; border-radius: var(--r-md); box-shadow: inset 0 0 0 1px var(--line-2); position: relative; }
+	/* render each at 1280 px wide and scale it into its third */
+	iframe { position: absolute; top: 0; left: 0; width: 1280px; height: 200%; border: 0; transform: scale(var(--k, .36)); transform-origin: 0 0; }
+</style>
+</head>
+<body>
+<div class="top">
+	<h1>Linear Radar — three layouts</h1><span>same fake data in each · open one full size to judge it · ⚙ in any of them opens the shared <a href="settings.html" target="_blank">settings page</a></span>
+	<span class="theme"><a href="?theme=dark">dark</a> · <a href="?theme=light">light</a></span>
+</div>
+<div class="grid">
+	<figure><figcaption><b>A</b> Compact list — stacked sections, one line per issue<a href="mockup-a.html" target="_blank">open ↗</a></figcaption><div class="frame"><iframe data-src="mockup-a.html"></iframe></div></figure>
+	<figure><figcaption><b>B</b> Three columns — like PR Radar, two lines per issue<a href="mockup-b.html" target="_blank">open ↗</a></figcaption><div class="frame"><iframe data-src="mockup-b.html"></iframe></div></figure>
+	<figure><figcaption><b>C</b> Inbox tabs — side filters, unseen group, then by team<a href="mockup-c.html" target="_blank">open ↗</a></figcaption><div class="frame"><iframe data-src="mockup-c.html"></iframe></div></figure>
+</div>
+<script>
+	const theme = new URLSearchParams(location.search).get("theme") || "dark";
+	document.documentElement.dataset.theme = theme;
+	for (const f of document.querySelectorAll("iframe")) f.src = f.dataset.src + "?theme=" + theme;
+	for (const a of document.querySelectorAll("figcaption a")) a.href += "?theme=" + theme;
+	const fit = () => document.querySelectorAll(".frame").forEach(fr => {
+		const k = fr.clientWidth / 1280;
+		const i = fr.querySelector("iframe"); i.style.setProperty("--k", k); i.style.height = (fr.clientHeight / k) + "px";
+	});
+	addEventListener("resize", fit); fit();
+</script>
+</body>
+</html>
