@@ -15,7 +15,7 @@ It lives only in `LLjo/barista-linear-radar` and installs through Plugins → In
 > `index.html` shows all three side by side, `mockup-a/b/c.html` each one full size, and
 > `settings.html` the settings page they all share.
 
-The repo will be made **public** later. Nothing in it may be a real key, token, workspace
+The repo will be made **public** later, by the human: never change its visibility yourself. Nothing in it may be a real key, token, workspace
 or internal URL, including in git history. Fixtures use invented values, like the mockups'
 `data.js` does. Do **not** write the literal prefix of Linear API keys anywhere in the repo
 (source, tests, fixtures, docs), because the build's secret scan greps for it.
@@ -36,8 +36,8 @@ or internal URL, including in git history. Fixtures use invented values, like th
 manifest.json     name "linear-radar", title "Linear Radar", icon "linear", automations.triggers (below)
 package.json      scaffold deps: hono 4.12.9 exact, zod ^4.3.6, SDK + types via file:; NO @linear/sdk
                   (plain fetch to the GraphQL endpoint, one query string we own and test)
-LICENSE           MIT
-README.md         what it is, install from repo, how to create and paste a personal API key
+LICENSE           MIT (stub committed by #1430; keep it)
+README.md         stub committed by #1430: what it is, install from repo, key setup; update "Status" when built
 plugin.ts         definePlugin<AppType>(import.meta.dirname)
 server/
   index.ts        routes, registerHealthCheck, registerShutdown(closeDb), start, startPoller()
@@ -271,7 +271,7 @@ semantics below.
   "description": "An open Linear issue newly shows up in one of your lists: assigned to you, created by you, or mentioning or subscribing you.",
   "fields": [
     { "name": "team",      "label": "Team key",  "type": "string" },
-    { "name": "label",     "label": "Label",     "type": "string" },
+    { "name": "label",     "label": "Label",     "type": "string", "multi": true },
     { "name": "priority",  "label": "Priority",  "type": "enum", "options": ["urgent", "high", "medium", "low", "none"] },
     { "name": "assignee",  "label": "Assignee",  "type": "enum", "options": ["me", "someone else", "unassigned"] },
     { "name": "project",   "label": "Project",   "type": "string" },
@@ -305,9 +305,16 @@ never calls Linear, so an Automations tick costs no Linear quota.
 - **Key**: the issue UUID, which Automations namespaces as `linear-radar:new-issue-for-me:<id>`.
   The identifier (`ENG-412`) is not a stable key, because it changes when an issue moves team.
   One key per issue means a rule starts at most one item per issue, ever.
-- **`label`** is a `string[]`, and a rule's label filter matches when any label equals it,
-  ignoring case. If #1429's contract only allows scalar values, send the labels joined
-  with `", "` and use a contains match.
+- **`label`** is a `string[]`, so the manifest declares it `multi: true` (the contract
+  requires every array field to be declared, in whatever spelling the plugins notes give).
+  A rule's label filter matches when any one label matches.
+- **What fires, per the #1429 contract:** Automations runs a rule's field filters *before* it
+  marks an event seen, so an event that does not match yet can fire later, once it does (it
+  gets relabelled or reassigned). The exception is the baseline: a rule's first run records
+  **every** event key present at that moment, matching or not, and those keys never fire.
+  An issue already in your lists when the rule was created therefore never starts anything,
+  even after a relabel. Only an issue that enters your lists after the rule's first run can
+  fire.
 - **`since`**: return the events with `at >= since`. Automations' own baseline decides what is
   new for each rule.
 - **Don't fire for old issues.** When a workspace is polled for the first time (a fresh
@@ -318,7 +325,7 @@ never calls Linear, so an Automations tick costs no Linear quota.
 - **Until `snapshot.ready`, answer 503 `{error: "not ready"}`, not an empty list**, and the
   same while a workspace is rejected or rate-limited. An empty list on boot would become a
   rule's baseline, and the first real poll would then look like a flood of new issues.
-  Automations must treat a non-2xx answer as "no data this tick". Confirm that #1429 does.
+  Automations must treat a non-2xx answer as "no data this tick", not as an empty baseline.
 - **`start.body`** is markdown:
 
   ```
@@ -363,7 +370,7 @@ never calls Linear, so an Automations tick costs no Linear quota.
 7. The workspace and team filters and the refresh interval work and persist (filters in
    localStorage, interval across a restart).
 8. The page matches the picked mockup, with no element the mockup lacks.
-9. Automations lists "Linear Radar: New Linear issue for me" with the 7 fields. A dry-run on a
+9. Automations lists "Linear Radar: New Linear issue for me" with the 7 fields (`label` multi). A dry-run on a
    rule lists nothing for the existing issues. A new issue assigned to you then shows up as
    one would-start, and only once across ticks. Adding a second workspace starts nothing.
 10. `bun test` passes with tests for `query.ts` (filter variables), `map.ts` (list
