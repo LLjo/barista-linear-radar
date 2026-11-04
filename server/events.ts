@@ -42,8 +42,7 @@ export function startBody(r: IssueRow): string {
   ].join("\n");
 }
 
-/** One issue, once, with every list it is in (`list` is a multi field). */
-export function toEvent(r: IssueRow, lists: ListId[], at: string): BusEventInput {
+export function toEvent(r: IssueRow, list: ListId, at: string): BusEventInput {
   return {
     key: r.id,
     title: `${r.identifier} ${r.title}`,
@@ -56,7 +55,7 @@ export function toEvent(r: IssueRow, lists: ListId[], at: string): BusEventInput
       assignee: r.assignee,
       project: r.project ?? "",
       workspace: r.workspace.urlKey,
-      list: lists,
+      list,
     },
     brief: { title: `Linear ${r.identifier}: ${r.title}`, body: startBody(r) },
   };
@@ -69,27 +68,25 @@ export function toEvent(r: IssueRow, lists: ListId[], at: string): BusEventInput
  * or predates it past a cut list — it was never news, and would read as news to a scope already read.
  */
 export function workspaceEvents(lists: Lists, seen: Map<string, FirstSeen>): BusEventInput[] {
-  const byId = new Map<string, { r: IssueRow; lists: ListId[] }>();
+  const out = new Map<string, BusEventInput>();
+  // map.ts puts an issue in one list; should two ever hold it, the first wins (one key, one event).
   for (const list of LIST_IDS) {
     for (const r of lists[list]) {
-      const hit = byId.get(r.id);
-      if (hit) hit.lists.push(list);
-      else byId.set(r.id, { r, lists: [list] });
+      const f = seen.get(r.id);
+      if (!f || f.initial || out.has(r.id)) continue;
+      out.set(r.id, toEvent(r, list, f.at));
     }
   }
-  const out: BusEventInput[] = [];
-  for (const { r, lists: inLists } of byId.values()) {
-    const f = seen.get(r.id);
-    if (!f || f.initial) continue;
-    out.push(toEvent(r, inLists, f.at));
-  }
-  return out;
+  return [...out.values()];
 }
 
+/** Every issue id of one workspace's lists. */
+export const issueIds = (lists: Lists): string[] => LIST_IDS.flatMap((k) => lists[k]).map((r) => r.id);
+
 /**
- * A poll after which a baseline may be answered: at least one workspace, and every one had a good poll this time
- * (not rejected, rate limited or failing — its issues are unknown, not absent). No workspace stays "not ready":
- * a listener's empty baseline then would be a guess.
+ * Whether a baseline may be answered from the log: at least one workspace, each has had a good poll since boot,
+ * and none is rejected, rate limited or failing at its last poll (its issues are unknown, not absent). No workspace
+ * stays "not ready": a listener's empty baseline then would be a guess.
  */
 export function allPolledOk(s: Snapshot): boolean {
   return s.ready && s.workspaces.length > 0 && s.workspaces.every((w) => w.status === "ok" && !w.lastError && !w.pausedUntil);

@@ -20,10 +20,11 @@ The key stays on the Barista host. It is never shown again, never logged and nev
 ## Automations
 
 The plugin declares the event **Linear Radar: New Linear issue for me** (`linear-radar:new-issue-for-me`,
-`contributes.events`). It is logged once per issue, when an open issue newly shows up in one of your lists,
-and carries team, label, priority, assignee, project, workspace and list (every list the issue is in), so a
-rule can filter on them. Issues that were already in your lists when a workspace was added are logged as
-standing, never as new. Every poll syncs the plugin's event log, so it costs no extra Linear requests.
+`contributes.events`, keyed by the Linear issue). An open issue that newly shows up in one of your lists is
+logged as new; a later change to its title or fields is logged as a revision of the same key. It carries team,
+label, priority, assignee, project, workspace and list, so a rule can filter on them. Issues that were already
+in your lists when a workspace was added are never logged as new. Every poll syncs the plugin's event log, so
+it costs no extra Linear requests.
 Needs Barista with the plugin event bus (#1442); Linear Radar 0.1 served the older request/reply trigger.
 
 One limit: Linear Radar reads the newest 50 issues per list and the newest 100 notifications. Once a

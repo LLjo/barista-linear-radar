@@ -27,12 +27,12 @@ function seen(fresh: Record<string, string> = {}): Map<string, FirstSeen> {
 }
 
 describe("the manifest event", () => {
-  test("has the 7 fields, label and list multi", () => {
+  test("has the 7 fields, label multi, list a plain enum", () => {
     const t = manifest.contributes.events[0];
     expect(t.id).toBe(EVENT_ID);
     expect(t.fields.map((f) => f.name)).toEqual(["team", "label", "priority", "assignee", "project", "workspace", "list"]);
     expect(t.fields.find((f) => f.name === "label")).toMatchObject({ type: "string", multi: true });
-    expect(t.fields.find((f) => f.name === "list")).toMatchObject({ type: "enum", multi: true });
+    expect(t.fields.find((f) => f.name === "list")).toEqual({ name: "list", label: "List", type: "enum", options: ["assigned", "mentions", "created"] });
   });
 
   test("parses clean through the bus's own parser, with a version and a key", () => {
@@ -91,26 +91,26 @@ describe("workspaceEvents (one sync)", () => {
       title: "ENG-412 Checkout returns 500 when the cart has a gift card",
       url: "https://linear.app/acme/issue/eng-412/x",
       at: NEW,
-      fields: { team: "ENG", label: ["bug"], priority: "urgent", assignee: "me", project: "Payments v2", workspace: "acme", list: ["assigned"] },
+      fields: { team: "ENG", label: ["bug"], priority: "urgent", assignee: "me", project: "Payments v2", workspace: "acme", list: "assigned" },
       brief: { title: "Linear ENG-412: Checkout returns 500 when the cart has a gift card" },
     });
     expect(e.brief!.body).toBe(startBody(lists.assigned.find((r) => r.id === "iss-a1")!));
   });
 
-  test("label [] and project \"\" when missing; the lists it is in", () => {
+  test("label [] and project \"\" when missing; the list it is in", () => {
     const [e] = workspaceEvents(lists, seen({ "iss-a3": NEW }));
-    expect(e.fields).toMatchObject({ label: [], project: "", priority: "medium", list: ["assigned"] });
+    expect(e.fields).toMatchObject({ label: [], project: "", priority: "medium", list: "assigned" });
     const [m] = workspaceEvents(lists, seen({ "iss-m1": NEW }));
-    expect(m.fields).toMatchObject({ list: ["mentions"], assignee: "someone else", priority: "high" });
+    expect(m.fields).toMatchObject({ list: "mentions", assignee: "someone else", priority: "high" });
     const [c] = workspaceEvents(lists, seen({ "iss-c1": NEW }));
-    expect(c.fields).toMatchObject({ list: ["created"], assignee: "unassigned", priority: "none" });
+    expect(c.fields).toMatchObject({ list: "created", assignee: "unassigned", priority: "none" });
   });
 
-  test("an issue in two lists is ONE event naming both", () => {
+  test("an issue in two lists is ONE event, the first list's", () => {
     const both = { ...lists, mentions: [...lists.mentions, lists.assigned.find((r) => r.id === "iss-a1")!] };
     const ev = workspaceEvents(both, seen({ "iss-a1": NEW }));
     expect(ev.map((e) => e.key)).toEqual(["iss-a1"]);
-    expect(ev[0].fields!.list).toEqual(["assigned", "mentions"]);
+    expect(ev[0].fields!.list).toBe("assigned");
   });
 
   test("every field survives the bus's own field cleaner unchanged", () => {

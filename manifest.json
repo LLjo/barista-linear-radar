@@ -19,7 +19,7 @@
           { "name": "assignee", "label": "Assignee", "type": "enum", "options": ["me", "someone else", "unassigned"] },
           { "name": "project", "label": "Project", "type": "string" },
           { "name": "workspace", "label": "Workspace", "type": "string" },
-          { "name": "list", "label": "List", "type": "enum", "multi": true, "options": ["assigned", "mentions", "created"], "description": "Every list the issue is in" }
+          { "name": "list", "label": "List", "type": "enum", "options": ["assigned", "mentions", "created"] }
         ]
       }
     ]

@@ -1,7 +1,7 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import type { BusEventInput } from "@barista/plugin-sdk";
 import radar from "./fixtures/radar.json";
-import { radarBus, type PollBus } from "./bus.js";
+import { onWatchesChanged, radarBus, type PollBus } from "./bus.js";
 import { EVENT_ID } from "./events.js";
 import { mapRadar } from "./map.js";
 import { createPoller, type PollerDeps } from "./poll-loop.js";
@@ -64,6 +64,16 @@ describe("radarBus", () => {
     const b = radarBus(f.handle, seenFn([]));
     b.polled([{ w: ws("a"), lists }], snap([ws("a"), ws("b", { status: "rejected" })]), 3);
     expect(f.calls).toEqual([["sync", "a", []]]);
+  });
+
+  test("a watch change re-readies at once with a fresh token, only when the last poll was all ok", () => {
+    const f = fakeHandle();
+    f.bump();
+    onWatchesChanged(f.handle, snap([ws("a")]));
+    expect(f.calls).toEqual([["readToken", 1], ["markReady", 1]]);
+    const g = fakeHandle();
+    onWatchesChanged(g.handle, snap([ws("a", { status: "rejected" })]));
+    expect(g.calls).toEqual([]);
   });
 
   test("forget tombstones the workspace's scope", () => {
