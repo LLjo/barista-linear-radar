@@ -28,6 +28,6 @@ const poller = createPoller({
   changed: () => nats.publish(subjects.changed, undefined),
 });
 
-export const { getSnapshot, poll, refreshNow, forget, changed } = poller;
+export const { getSnapshot, poll, refreshNow, forget, changed, attachBus } = poller;
 export const startPoller = poller.start;
 export const stopPoller = poller.stop;

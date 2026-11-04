@@ -1,8 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import type { TriggerHandler } from "@barista/plugin-sdk/triggers";
-import { TRIGGER_ID, triggerEvents } from "./events.js";
 import { addKey, removeKey, type NewWorkspace } from "./keys.js";
 import { gql, LinearError } from "./linear.js";
 import { changed, forget, getSnapshot, poll, refreshNow } from "./poller.js";
@@ -10,7 +8,7 @@ import { VIEWER_QUERY, type Viewer } from "./query.js";
 import { getSettings, saveSettings } from "./settings.js";
 import { REFRESH_CHOICES, type IssueRow, type SettingsReply, type Snapshot } from "./types.js";
 import { toPublic } from "./snapshot.js";
-import { firstSeen, getWorkspace, listWorkspaces } from "./workspaces.js";
+import { getWorkspace, listWorkspaces } from "./workspaces.js";
 
 export const MAX_WORKSPACES = 5;
 export const REJECTED = "Linear rejected that key. Check that it was copied in full.";
@@ -41,17 +39,11 @@ async function checkKey(key: string): Promise<Checked> {
   }
 }
 
-/** Descriptions and people names feed only the trigger's start body: the page does not need them. */
+/** Descriptions and people names feed only the event's brief: the page does not need them. */
 const lean = ({ description: _d, assigneeName: _a, creatorName: _c, ...r }: IssueRow): IssueRow => r;
 const forPage = (s: Snapshot): Snapshot => ({ ...s, assigned: s.assigned.map(lean), mentions: s.mentions.map(lean), created: s.created.map(lean) });
 
 const settingsReply = (): SettingsReply => ({ ...getSettings(), workspaces: getSnapshot().workspaces });
-
-/** The trigger reads the last poll: no Linear request, no quota. */
-function eventsNow(since: Date | null) {
-  const s = getSnapshot();
-  return triggerEvents(s, firstSeen([...s.assigned, ...s.mentions, ...s.created].map((r) => r.id)), since);
-}
 
 const app = new Hono()
   .get("/settings", (c) => c.json(settingsReply()))
@@ -94,10 +86,6 @@ const app = new Hono()
   .get("/issues", (c) => c.json(forPage(getSnapshot())))
   .post("/refresh", async (c) => c.json(forPage(await poll())))
   .get("/count", (c) => c.json({ unseen: getSnapshot().unseen }));
-
-/** Served by `serveTriggers` (index.ts): the SDK checks the trigger id and `since`, validates the events, and
- *  answers "not ready" for null. */
-export const triggerHandlers: Record<string, TriggerHandler> = { [TRIGGER_ID]: ({ since }) => eventsNow(since) };
 
 export type AppType = typeof app;
 export default app;

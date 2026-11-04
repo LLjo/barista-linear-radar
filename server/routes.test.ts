@@ -1,4 +1,5 @@
-import { afterAll, beforeAll, describe, expect, spyOn, test } from "bun:test";
+import { afterAll, describe, expect, spyOn, test } from "bun:test";
+import type { BusEventInput } from "@barista/plugin-sdk";
 import { mkdtempSync, rmSync, statSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
@@ -34,11 +35,26 @@ globalThis.fetch = (async (_url: string, init: RequestInit) => {
   return json(viewer);
 }) as unknown as typeof fetch;
 
-const { default: app, triggerHandlers } = await import("./routes.js");
-const { answerTriggerRequest } = await import("@barista/plugin-sdk/triggers");
-const { poll } = await import("./poller.js");
+const { default: app } = await import("./routes.js");
+const { attachBus, poll } = await import("./poller.js");
+const { radarBus } = await import("./bus.js");
 const { db } = await import("./db.js");
 const ws = await import("./workspaces.js");
+
+/** A fake bus handle: what stands per scope (the last sync), and whether the last poll marked the event ready. */
+const standing = new Map<string, BusEventInput[]>();
+let markedThisPoll = false;
+attachBus(radarBus({
+  sync: (_event, scope, evs) => {
+    standing.set(scope, evs);
+    return [];
+  },
+  readToken: () => {
+    markedThisPoll = false;
+    return 0;
+  },
+  markReady: () => (markedThisPoll = true),
+}, ws.firstSeen));
 const { mapRadar } = await import("./map.js");
 const seenRows = () => db.query<{ issue_id: string; initial: number }>("SELECT issue_id, initial FROM linear_radar_first_seen ORDER BY issue_id");
 
@@ -58,8 +74,9 @@ async function call(method: string, path: string, body?: unknown) {
   bodies.push(text);
   return { status: res.status, text, json: () => JSON.parse(text) };
 }
-async function events(since?: string): Promise<any> {
-  const answer = await answerTriggerRequest(triggerHandlers, { trigger: "new-issue-for-me", since: since ?? null });
+/** What the bus was last told: `ready` = the last poll marked it ready; `events` = what stands, every scope. */
+function events(): { ready: boolean; events: BusEventInput[] } {
+  const answer = { ready: markedThisPoll, events: [...standing.values()].flat() };
   bodies.push(JSON.stringify(answer));
   return answer;
 }
@@ -72,13 +89,9 @@ afterAll(() => {
 });
 
 describe("routes", () => {
-  beforeAll(async () => {
-    expect((await events()).error).toContain("not ready yet");
-  });
-
-  test("a rule polling before any workspace exists gets not ready, never [] (its baseline)", async () => {
+  test("a poll before any workspace exists does not mark the event ready (an empty baseline would be a guess)", async () => {
     await poll();
-    expect((await events()).error).toContain("not ready yet");
+    expect(events()).toEqual({ ready: false, events: [] });
   });
 
   test("the db file is owner-only", () => {
@@ -106,26 +119,23 @@ describe("routes", () => {
     expect(Object.keys(r.json())).not.toContain("apiKey");
   });
 
-  test("after the first poll: lists, count, and a trigger that serves nothing old", async () => {
+  test("after the first poll: lists, count, ready, and nothing old on the bus", async () => {
     await poll();
     const issues = (await call("GET", "/issues")).json();
     expect(issues.ready).toBe(true);
     expect(issues.assigned.map((r: { identifier: string }) => r.identifier)).toEqual(["ENG-412", "ENG-350", "WEB-77"]);
     expect(issues.assigned[0].description).toBeUndefined();
     expect((await call("GET", "/count")).json()).toEqual({ unseen: 3 });
-    expect(await events()).toEqual({ events: [] });
+    expect(events()).toEqual({ ready: true, events: [] });
+    expect([...standing.keys()]).toEqual(["org-acme"]);
   });
 
-  test("an issue new since the first poll is one event", async () => {
+  test("an issue new since the first poll is synced as one event at its first-seen time", async () => {
     db.run("UPDATE linear_radar_first_seen SET initial = 0, first_seen_at = ? WHERE issue_id = ?", ["2026-11-03T10:00:00.000Z", "iss-c1"]);
-    const e = await events("2026-11-03T09:00:00.000Z");
-    expect(e.events.map((x: { key: string }) => x.key)).toEqual(["iss-c1"]);
-    expect(e.events[0].start.title).toBe("Linear ENG-418: Spike: replace the cron runner with a queue");
-  });
-
-  test("an unknown trigger and a bad since are error replies", async () => {
-    expect(await answerTriggerRequest(triggerHandlers, { trigger: "nope", since: null })).toEqual({ error: 'no trigger "nope" here' });
-    expect(await events("yesterday")).toEqual({ error: "since must be an ISO time" });
+    await poll();
+    const e = events();
+    expect(e.events.map((x) => x.key)).toEqual(["iss-c1"]);
+    expect(e.events[0]).toMatchObject({ at: "2026-11-03T10:00:00.000Z", brief: { title: "Linear ENG-418: Spike: replace the cron runner with a queue" } });
   });
 
   test("settings save the interval", async () => {
@@ -142,18 +152,19 @@ describe("routes", () => {
     expect((await call("PUT", "/workspaces/nope/key", { apiKey: KEY2 })).status).toBe(404);
   });
 
-  test("a key Linear starts rejecting: workspace rejected, lists kept, trigger not ready", async () => {
+  test("a key Linear starts rejecting: workspace rejected, lists kept, no sync and no markReady", async () => {
     radarStatus = 401;
     await poll();
     const s = (await call("POST", "/refresh")).json();
     expect(s.workspaces[0].status).toBe("rejected");
     expect(s.assigned.length).toBe(3);
-    expect((await events()).error).toContain("not ready yet");
+    expect(events()).toEqual({ ready: false, events: [expect.objectContaining({ key: "iss-c1" })] as never });
     radarStatus = 200;
   });
 
-  test("delete removes the workspace and its first-seen rows", async () => {
+  test("delete removes the workspace, its first-seen rows, and its events from the bus", async () => {
     expect((await call("DELETE", "/workspaces/org-acme")).json()).toEqual({ ok: true });
+    expect(standing.get("org-acme")).toEqual([]);
     expect((await call("GET", "/issues")).json().assigned).toEqual([]);
     expect(db.get<{ n: number }>("SELECT COUNT(*) AS n FROM linear_radar_first_seen")!.n).toBe(0);
     expect((await call("DELETE", "/workspaces/org-acme")).status).toBe(404);
@@ -173,7 +184,7 @@ describe("routes", () => {
     await call("POST", "/workspaces", { apiKey: KEY });
     await poll();
     expect(seenRows().every((r) => r.initial === 1)).toBe(true);
-    expect(await events()).toEqual({ events: [] });
+    expect(events()).toEqual({ ready: true, events: [] });
   });
 
   test("another person's key for the workspace starts over: their next poll is a first poll", async () => {
@@ -203,20 +214,19 @@ describe("routes", () => {
     radarBody = page(all.slice(0, 50));
     await call("POST", "/workspaces", { apiKey: KEY });
     await poll();
-    const baseline = await events();
-    expect(baseline).toEqual({ events: [] });
+    expect(events().events).toEqual([]);
     // Issue 55 was on page 2 all along. A comment bumps it into the first 50.
     radarBody = page([all[55], ...all.slice(0, 49)]);
     await poll();
-    expect(await events()).toEqual({ events: [] });
+    expect(events().events).toEqual([]);
     // A genuinely new issue does fire.
     radarBody = page([issue(99, new Date(Date.now() + 1000).toISOString()), all[55], ...all.slice(0, 48)]);
     await poll();
-    expect((await events()).events.map((e: { key: string }) => e.key)).toEqual(["big-99"]);
+    expect(events().events.map((e) => e.key)).toEqual(["big-99"]);
     // Linear later sends everything (issues closed): an old one never seen still does not fire.
     radarBody = { data: { ...page([all[57]]).data, assigned: { nodes: [all[57]], pageInfo: { hasNextPage: false } } } };
     await poll();
-    expect(await events()).toEqual({ events: [] });
+    expect(events().events).toEqual([]);
     radarBody = null;
   });
 

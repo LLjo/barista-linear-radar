@@ -1,3 +1,4 @@
+import type { PollBus } from "./bus.js";
 import { LinearError } from "./linear.js";
 import { mapRadar } from "./map.js";
 import type { RadarData } from "./query.js";
@@ -35,6 +36,7 @@ export function createPoller(deps: PollerDeps) {
   let rerun: Promise<Snapshot> | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let stopped = false;
+  let bus: PollBus | null = null;
 
   async function teamsFor(w: WorkspaceRecord, key: string, l: Live): Promise<void> {
     if (l.teamsAt && now() - l.teamsAt < TEAMS_EVERY_MS) return;
@@ -77,6 +79,8 @@ export function createPoller(deps: PollerDeps) {
   }
 
   async function fetchOnce(): Promise<Snapshot> {
+    // Before anything is read: a watch change after this point is not covered by this poll.
+    const token = bus?.readToken() ?? 0;
     const workspaces = deps.listWorkspaces();
     for (const id of live.keys()) if (!workspaces.some((w) => w.id === id)) live.delete(id);
     // In parallel: every request has its own 20 s timeout, so one hung workspace stalls nobody.
@@ -84,7 +88,15 @@ export function createPoller(deps: PollerDeps) {
     if (results.some(Boolean)) fetchedAt = new Date(now()).toISOString();
     booted = true;
     // Re-read: a poll may have marked a workspace rejected or polled.
-    return buildSnapshot(deps.listWorkspaces(), live, { fetchedAt, booted, now: now() });
+    const s = buildSnapshot(deps.listWorkspaces(), live, { fetchedAt, booted, now: now() });
+    const good = workspaces.flatMap((w, i) => (results[i] && live.get(w.id)?.lists ? [{ w, lists: live.get(w.id)!.lists! }] : []));
+    try {
+      bus?.polled(good, s, token);
+    } catch (e) {
+      // The page still gets its lists; the bus stays as it was (not marked ready) until a poll gets through.
+      console.warn("[linear-radar] event bus not updated:", e instanceof Error ? e.message : "unexpected error");
+    }
+    return s;
   }
 
   /** Poll now. A call while a poll is running joins it rather than starting a second one. */
@@ -159,9 +171,18 @@ export function createPoller(deps: PollerDeps) {
     schedule,
     /** Tell the UI the snapshot changed without polling (a removed workspace). */
     changed: () => deps.changed(),
-    /** A removed workspace: forget its lists now. */
+    /** A removed workspace or another person's key: forget its lists now, and its events on the bus. */
     forget(id: string): void {
       live.delete(id);
+      try {
+        bus?.forget(id);
+      } catch (e) {
+        console.warn("[linear-radar] event bus not updated:", e instanceof Error ? e.message : "unexpected error");
+      }
+    },
+    /** The event bus this poller feeds (index.ts); none in tests that do not need it. */
+    attachBus(b: PollBus | null): void {
+      bus = b;
     },
     async start(): Promise<void> {
       await safePoll();

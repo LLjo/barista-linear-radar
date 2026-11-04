@@ -1,8 +1,8 @@
-import type { TriggerEventInput } from "@barista/plugin-sdk/triggers";
-import type { IssueRow, ListId, Snapshot } from "./types.js";
+import type { BusEventInput } from "@barista/plugin-sdk";
+import { LIST_IDS, type IssueRow, type ListId, type Lists, type Snapshot } from "./types.js";
 import type { FirstSeen } from "./workspaces.js";
 
-export const TRIGGER_ID = "new-issue-for-me";
+export const EVENT_ID = "new-issue-for-me";
 export const DESCRIPTION_CAP = 4_000;
 
 const PRIORITY_WORDS = ["none", "urgent", "high", "medium", "low"] as const;
@@ -19,7 +19,7 @@ export function quoteDescription(text: string): string {
 const linkTarget = (url: string) => `<${url.replace(/[<>\s]/g, encodeURIComponent)}>`;
 
 /**
- * The start body goes straight into an agent's prompt. Everything people typed in Linear — title,
+ * The brief goes straight into an agent's prompt. Everything people typed in Linear — title,
  * team, project, labels, names, description — sits inside one quote under an "untrusted" line; only
  * the identifier (Linear's own `ABC-123`) and the link are ours.
  */
@@ -42,7 +42,8 @@ export function startBody(r: IssueRow): string {
   ].join("\n");
 }
 
-export function toEvent(r: IssueRow, list: ListId, at: string): TriggerEventInput {
+/** One issue, once, with every list it is in (`list` is a multi field). */
+export function toEvent(r: IssueRow, lists: ListId[], at: string): BusEventInput {
   return {
     key: r.id,
     title: `${r.identifier} ${r.title}`,
@@ -55,31 +56,41 @@ export function toEvent(r: IssueRow, list: ListId, at: string): TriggerEventInpu
       assignee: r.assignee,
       project: r.project ?? "",
       workspace: r.workspace.urlKey,
-      list,
+      list: lists,
     },
-    start: { title: `Linear ${r.identifier}: ${r.title}`, body: startBody(r) },
+    brief: { title: `Linear ${r.identifier}: ${r.title}`, body: startBody(r) },
   };
 }
 
 /**
- * The trigger's events, or null = "not ready": with no workspace, before every workspace's first good poll, and while
- * any workspace is rejected, rate limited or failing — its issues are unknown, not absent, and a
- * `[]` on a rule's first poll would become its baseline. Issues first seen in their workspace's
- * first poll (`initial`) are never served. `since` null = the rule's baseline poll: all that stands.
+ * What one good poll of a workspace stands for: `bus.sync(EVENT_ID, <workspace id>, …)`. The SDK's first-read rule
+ * makes everything of a scope's first sync `initial` (an upgrade from 0.1 floods nothing); on top of it an issue whose
+ * own first-seen row is `initial` is never synced: it stood at the workspace's first poll (or a new person's key),
+ * or predates it past a cut list — it was never news, and would read as news to a scope already read.
  */
-export function triggerEvents(s: Snapshot, seen: Map<string, FirstSeen>, since: Date | null): TriggerEventInput[] | null {
-  // No workspace yet is "I don't know yet" too: a rule's first poll answered [] here would become its
-  // baseline, and every issue of the workspace added later would look new.
-  if (!s.ready || !s.workspaces.length) return null;
-  if (s.workspaces.some((w) => w.status !== "ok" || w.lastError || w.pausedUntil)) return null;
-  const out: TriggerEventInput[] = [];
-  for (const list of ["assigned", "mentions", "created"] as const) {
-    for (const r of s[list]) {
-      const f = seen.get(r.id);
-      if (!f || f.initial) continue;
-      if (since && Date.parse(f.at) < since.getTime()) continue;
-      out.push(toEvent(r, list, f.at));
+export function workspaceEvents(lists: Lists, seen: Map<string, FirstSeen>): BusEventInput[] {
+  const byId = new Map<string, { r: IssueRow; lists: ListId[] }>();
+  for (const list of LIST_IDS) {
+    for (const r of lists[list]) {
+      const hit = byId.get(r.id);
+      if (hit) hit.lists.push(list);
+      else byId.set(r.id, { r, lists: [list] });
     }
   }
+  const out: BusEventInput[] = [];
+  for (const { r, lists: inLists } of byId.values()) {
+    const f = seen.get(r.id);
+    if (!f || f.initial) continue;
+    out.push(toEvent(r, inLists, f.at));
+  }
   return out;
+}
+
+/**
+ * A poll after which a baseline may be answered: at least one workspace, and every one had a good poll this time
+ * (not rejected, rate limited or failing — its issues are unknown, not absent). No workspace stays "not ready":
+ * a listener's empty baseline then would be a guess.
+ */
+export function allPolledOk(s: Snapshot): boolean {
+  return s.ready && s.workspaces.length > 0 && s.workspaces.every((w) => w.status === "ok" && !w.lastError && !w.pausedUntil);
 }

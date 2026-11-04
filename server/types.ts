@@ -68,7 +68,7 @@ export interface IssueRow {
   /** Mentions list only. */
   why?: Why;
   by?: string;
-  /** Kept server-side for the trigger's start body; not shown by the UI. */
+  /** Kept server-side for the event's brief; not shown by the UI. */
   description?: string;
   assigneeName?: string;
   creatorName?: string;
