@@ -5,7 +5,7 @@ import type { IssueRow, Lists } from "./types.js";
 const POLLED = "2026-11-01T00:00:00.000Z";
 const row = (id: string, createdAt: string): IssueRow => ({
   id, identifier: id, title: id, url: "", workspace: { id: "w", name: "W", urlKey: "w" }, team: { key: "ENG", name: "" },
-  priority: 0, state: { name: "Todo", type: "unstarted" }, cycle: null, project: null, labels: [], assignee: "me",
+  priority: 0, state: { name: "Todo", type: "unstarted" }, cycle: null, project: null, labels: [], assignee: "me", delegate: "", prs: [],
   createdAt, updatedAt: createdAt, unseen: false,
 });
 const lists = (more: Partial<Lists["more"]> = {}): Lists => ({
