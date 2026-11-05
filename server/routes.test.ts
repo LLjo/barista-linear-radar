@@ -38,6 +38,7 @@ globalThis.fetch = (async (_url: string, init: RequestInit) => {
 const { default: app } = await import("./routes.js");
 const { attachBus, poll } = await import("./poller.js");
 const { radarBus } = await import("./bus.js");
+const { EVENT_ID } = await import("./events.js");
 const { db } = await import("./db.js");
 const ws = await import("./workspaces.js");
 
@@ -45,8 +46,8 @@ const ws = await import("./workspaces.js");
 const standing = new Map<string, BusEventInput[]>();
 let markedThisPoll = false;
 attachBus(radarBus({
-  sync: (_event, scope, evs) => {
-    standing.set(scope, evs);
+  sync: (event, scope, evs) => {
+    if (event === EVENT_ID) standing.set(scope, evs);
     return [];
   },
   readToken: () => {

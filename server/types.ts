@@ -62,6 +62,10 @@ export interface IssueRow {
   project: string | null;
   labels: string[];
   assignee: "me" | "someone else" | "unassigned";
+  /** The agent's name, "" when not delegated. */
+  delegate: string;
+  /** GitHub pull requests linked to the issue, canonical URLs. */
+  prs: string[];
   createdAt: string;
   updatedAt: string;
   unseen: boolean;

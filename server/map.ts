@@ -12,6 +12,13 @@ export const byUnseenThenUpdated = (a: IssueRow, b: IssueRow) =>
 
 const priorityOf = (p: number): Priority => (Number.isInteger(p) && p >= 0 && p <= 4 ? (p as Priority) : 0);
 
+const GITHUB_PR = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+$/;
+
+/** Linked GitHub PRs, only URLs that are exactly a PR (they go into an agent's prompt as links). */
+export const prsOf = (i: GqlIssue): string[] => [
+  ...new Set((i.attachments?.nodes ?? []).map((a) => a.url?.replace(/[#?].*$/, "").replace(/\/$/, "")).filter((u): u is string => !!u && GITHUB_PR.test(u))),
+];
+
 const notificationIssueId = (n: GqlNotification) => n.issueId ?? n.issue?.id ?? null;
 
 /** An issue is unseen while one of its notifications is unread and not snoozed into the future. */
@@ -40,6 +47,8 @@ export function toRow(i: GqlIssue, ws: IssueRow["workspace"], unseen: boolean): 
     project: i.project?.name ?? null,
     labels: (i.labels?.nodes ?? []).map((l) => l.name),
     assignee: !i.assignee ? "unassigned" : i.assignee.isMe ? "me" : "someone else",
+    delegate: i.delegate?.name ?? "",
+    prs: prsOf(i),
     createdAt: i.createdAt,
     updatedAt: i.updatedAt,
     unseen,

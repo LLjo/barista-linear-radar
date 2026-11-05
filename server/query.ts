@@ -26,6 +26,8 @@ fragment Iss on Issue {
   labels(first: 10) { nodes { name color } }
   assignee { id name isMe }
   creator { id name isMe }
+  delegate { id name }
+  attachments(first: 10) { nodes { url sourceType } }
 }`;
 
 export const VIEWER_QUERY = `query { viewer { id name organization { id name urlKey } } }`;
@@ -72,6 +74,9 @@ export interface GqlIssue {
   labels: { nodes: { name: string; color?: string }[] } | null;
   assignee: { id: string; name: string; isMe: boolean } | null;
   creator: { id: string; name: string; isMe: boolean } | null;
+  /** An agent the issue is delegated to (Linear's agents, e.g. a coding agent). */
+  delegate?: { id: string; name: string } | null;
+  attachments?: { nodes: { url: string; sourceType?: string | null }[] } | null;
 }
 
 export interface GqlConnection {

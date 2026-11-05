@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { cleanFields, parseEventDefs } from "@barista/types/plugin-events";
 import manifest from "../manifest.json";
 import radar from "./fixtures/radar.json";
-import { allPolledOk, DESCRIPTION_CAP, EVENT_ID, quoteDescription, startBody, workspaceEvents } from "./events.js";
+import { allPolledOk, DESCRIPTION_CAP, EVENT_ID, PR_EVENT_ID, prEvents, quoteDescription, startBody, workspaceEvents } from "./events.js";
 import { mapRadar } from "./map.js";
 import type { RadarData } from "./query.js";
 import { buildSnapshot, type Live } from "./snapshot.js";
@@ -30,7 +30,7 @@ describe("the manifest event", () => {
   test("has the 7 fields, label multi, list a plain enum", () => {
     const t = manifest.contributes.events[0];
     expect(t.id).toBe(EVENT_ID);
-    expect(t.fields.map((f) => f.name)).toEqual(["team", "label", "priority", "assignee", "project", "workspace", "list"]);
+    expect(t.fields.map((f) => f.name)).toEqual(["team", "label", "priority", "assignee", "project", "workspace", "list", "delegate"]);
     expect(t.fields.find((f) => f.name === "label")).toMatchObject({ type: "string", multi: true });
     expect(t.fields.find((f) => f.name === "list")).toEqual({ name: "list", label: "List", type: "enum", options: ["assigned", "mentions", "created"] });
   });
@@ -38,9 +38,10 @@ describe("the manifest event", () => {
   test("parses clean through the bus's own parser, with a version and a key", () => {
     const { events, errors } = parseEventDefs(manifest.contributes.events);
     expect(errors).toEqual([]);
-    expect(events.map((d) => d.id)).toEqual([EVENT_ID]);
+    expect(events.map((d) => d.id)).toEqual([EVENT_ID, PR_EVENT_ID]);
     expect(events[0]).toMatchObject({ version: 1, key: "One per Linear issue (its id)" });
-    expect(events[0].fields).toHaveLength(7);
+    expect(events[0].fields).toHaveLength(8);
+    expect(events[1].fields.map((f) => f.name)).toEqual(["team", "label", "priority", "project", "workspace", "delegate", "creator", "repo"]);
   });
 
   test("no request/reply trigger is declared any more", () => {
@@ -91,7 +92,7 @@ describe("workspaceEvents (one sync)", () => {
       title: "ENG-412 Checkout returns 500 when the cart has a gift card",
       url: "https://linear.app/acme/issue/eng-412/x",
       at: NEW,
-      fields: { team: "ENG", label: ["bug"], priority: "urgent", assignee: "me", project: "Payments v2", workspace: "acme", list: "assigned" },
+      fields: { team: "ENG", label: ["bug"], priority: "urgent", assignee: "me", project: "Payments v2", workspace: "acme", list: "assigned", delegate: "" },
       brief: { title: "Linear ENG-412: Checkout returns 500 when the cart has a gift card" },
     });
     expect(e.brief!.body).toBe(startBody(lists.assigned.find((r) => r.id === "iss-a1")!));
@@ -157,5 +158,36 @@ describe("start body", () => {
   test("cut at 4,000 characters with a note", () => {
     const q = quoteDescription("x".repeat(DESCRIPTION_CAP + 50));
     expect(q).toBe(`> ${"x".repeat(DESCRIPTION_CAP)}… (cut, read the rest in Linear)`);
+  });
+});
+
+describe("prEvents (PR linked to my issue)", () => {
+  const a2 = () => lists.assigned.find((r) => r.id === "iss-a2")!;
+
+  test("only exact GitHub PR URLs are kept, deduped without anchors", () => {
+    expect(a2().prs).toEqual(["https://github.com/acme/web/pull/88"]);
+    expect(a2().delegate).toBe("Codey");
+  });
+
+  test("one event per assigned issue with a PR, whatever its first-seen row says", () => {
+    const ev = prEvents(lists, NEW);
+    expect(ev.map((e) => e.key)).toEqual(["iss-a2"]);
+    expect(ev[0]).toMatchObject({
+      url: "https://github.com/acme/web/pull/88",
+      at: NEW,
+      fields: { team: "WEB", delegate: "Codey", repo: ["acme/web"] },
+    });
+    expect(ev[0].brief!.body.split("\n")[0]).toBe("Pull requests linked in Linear: https://github.com/acme/web/pull/88");
+    expect(ev[0].brief!.body).toContain("Delegate Codey");
+  });
+
+  test("an issue assigned to someone else never fires", () => {
+    const other = { ...lists, assigned: lists.assigned.map((r) => ({ ...r, assignee: "someone else" as const })) };
+    expect(prEvents(other, NEW)).toEqual([]);
+  });
+
+  test("every field survives the bus's own field cleaner unchanged", () => {
+    const declared = new Set(manifest.contributes.events[1].fields.map((f) => f.name));
+    for (const e of prEvents(lists, NEW)) expect(cleanFields(e.fields, declared) as Record<string, unknown>).toEqual(e.fields!);
   });
 });

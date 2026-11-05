@@ -2,7 +2,8 @@
 
 A [Barista](https://github.com/LLjo/Barista) plugin that lists the open Linear issues that involve you
 (**Assigned**, **Mentions & subscribed**, **Created by me**), unseen first, with priority, state and cycle
-badges and links into Linear. It also puts an event on Barista's plugin event bus, **"New Linear issue for me"**, for Automations.
+badges and links into Linear. It also puts two events on Barista's plugin event bus for Automations: **"New Linear issue for me"**
+and **"PR linked to my Linear issue"**.
 
 ## Install
 
@@ -26,6 +27,13 @@ label, priority, assignee, project, workspace and list, so a rule can filter on 
 in your lists when a workspace was added are never logged as new. Every poll syncs the plugin's event log, so
 it costs no extra Linear requests.
 Needs Barista with the plugin event bus (#1442); Linear Radar 0.1 served the older request/reply trigger.
+Both events also carry `delegate`: the Linear agent the issue is delegated to ("" when none).
+
+**PR linked to my Linear issue** (`linear-radar:pr-linked-for-me`, keyed by the Linear issue) fires when a GitHub
+pull request is first linked to an open issue assigned to you, for example when a coding agent the issue is
+delegated to opens one. It carries team, label, priority, project, workspace, delegate, creator and repo
+(`owner/name` of each linked PR), and its brief lists the PR links. Issues that already had a PR when the
+workspace was first synced never fire; an older issue that gets its first PR later does.
 
 One limit: Linear Radar reads the newest 50 issues per list and the newest 100 notifications. Once a
 workspace has more than that, it cannot tell an old issue that was always there from one that just

@@ -3,6 +3,7 @@ import { LIST_IDS, type IssueRow, type ListId, type Lists, type Snapshot } from 
 import type { FirstSeen } from "./workspaces.js";
 
 export const EVENT_ID = "new-issue-for-me";
+export const PR_EVENT_ID = "pr-linked-for-me";
 export const DESCRIPTION_CAP = 4_000;
 
 const PRIORITY_WORDS = ["none", "urgent", "high", "medium", "low"] as const;
@@ -32,7 +33,7 @@ export function startBody(r: IssueRow): string {
     r.project && `Project ${r.project}`,
     r.labels.length && `Labels ${r.labels.join(", ")}`,
   ].filter(Boolean);
-  const people = [`Assignee ${r.assigneeName ?? "nobody"}`, r.creatorName && `Creator ${r.creatorName}`].filter(Boolean);
+  const people = [`Assignee ${r.assigneeName ?? "nobody"}`, r.delegate && `Delegate ${r.delegate}`, r.creatorName && `Creator ${r.creatorName}`].filter(Boolean);
   const quoted = [quoteLines(`${r.identifier} ${r.title}`), quoteLines(facts.join(" · ")), quoteLines(people.join(" · "))];
   if (r.description?.trim()) quoted.push(">", quoteDescription(r.description.trim()));
   return [
@@ -56,9 +57,47 @@ export function toEvent(r: IssueRow, list: ListId, at: string): BusEventInput {
       project: r.project ?? "",
       workspace: r.workspace.urlKey,
       list,
+      delegate: r.delegate,
     },
     brief: { title: `Linear ${r.identifier}: ${r.title}`, body: startBody(r) },
   };
+}
+
+/** `owner/repo` of a PR URL that map.ts already checked. */
+const repoOf = (pr: string) => pr.split("/").slice(3, 5).join("/");
+
+/** The PR links are map.ts's checked GitHub URLs, so they stand outside the untrusted quote. */
+export function prBody(r: IssueRow): string {
+  return [`Pull requests linked in Linear: ${r.prs.join(", ")}`, "", startBody(r)].join("\n");
+}
+
+export function toPrEvent(r: IssueRow, at: string): BusEventInput {
+  return {
+    key: r.id,
+    title: `${r.identifier} ${r.title}`,
+    url: r.prs[0],
+    at,
+    fields: {
+      team: r.team.key,
+      label: r.labels,
+      priority: PRIORITY_WORDS[r.priority],
+      project: r.project ?? "",
+      workspace: r.workspace.urlKey,
+      delegate: r.delegate,
+      creator: r.creatorName ?? "",
+      repo: [...new Set(r.prs.map(repoOf))],
+    },
+    brief: { title: `Review ${r.identifier}: ${r.title}`, body: prBody(r) },
+  };
+}
+
+/**
+ * Every issue assigned to me that has a linked GitHub PR stands in the PR event's log, keyed by the issue: the SDK's
+ * first-read rule keeps what stood at the first sync `initial`, so only a PR linked after that is news. Unlike
+ * {@link workspaceEvents}, an issue that was in the first poll still fires when its first PR is linked later.
+ */
+export function prEvents(lists: Lists, at: string): BusEventInput[] {
+  return lists.assigned.filter((r) => r.assignee === "me" && r.prs.length).map((r) => toPrEvent(r, at));
 }
 
 /**

@@ -106,6 +106,30 @@
             "id": "user-me",
             "name": "Alex Doe",
             "isMe": true
+          },
+          "delegate": {
+            "id": "agent-1",
+            "name": "Codey"
+          },
+          "attachments": {
+            "nodes": [
+              {
+                "url": "https://github.com/acme/web/pull/88",
+                "sourceType": "github"
+              },
+              {
+                "url": "https://github.com/acme/web/pull/88#issuecomment-1",
+                "sourceType": "github"
+              },
+              {
+                "url": "https://evil.example/github.com/a/b/pull/1",
+                "sourceType": "github"
+              },
+              {
+                "url": "https://github.com/acme/web/issues/3",
+                "sourceType": "github"
+              }
+            ]
           }
         },
         {

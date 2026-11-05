@@ -2,7 +2,7 @@ import { describe, expect, spyOn, test } from "bun:test";
 import type { BusEventInput } from "@barista/plugin-sdk";
 import radar from "./fixtures/radar.json";
 import { onWatchesChanged, radarBus, type PollBus } from "./bus.js";
-import { EVENT_ID } from "./events.js";
+import { EVENT_ID, PR_EVENT_ID } from "./events.js";
 import { mapRadar } from "./map.js";
 import { createPoller, type PollerDeps } from "./poll-loop.js";
 import type { RadarData } from "./query.js";
@@ -21,14 +21,17 @@ const ws = (id: string, over: Partial<WorkspaceRecord> = {}): WorkspaceRecord =>
 /** A fake SDK handle: records every call, with the watch generation a test can bump. */
 function fakeHandle() {
   const calls: (["sync", string, string[]] | ["markReady", number] | ["readToken", number])[] = [];
+  const prSyncs: [string, string[]][] = [];
   let gen = 0;
   return {
     calls,
+    prSyncs,
     bump: () => ++gen,
     handle: {
       sync(event: string, scope: string, events: BusEventInput[]) {
-        expect(event).toBe(EVENT_ID);
-        calls.push(["sync", scope, events.map((e) => e.key)]);
+        expect([EVENT_ID, PR_EVENT_ID]).toContain(event);
+        if (event === EVENT_ID) calls.push(["sync", scope, events.map((e) => e.key)]);
+        else prSyncs.push([scope, events.map((e) => e.key)]);
         return [];
       },
       readToken() {
@@ -57,6 +60,7 @@ describe("radarBus", () => {
     const b = radarBus(f.handle, seenFn(["iss-c1"]));
     b.polled([{ w: ws("a"), lists }], snap([ws("a")]), 7);
     expect(f.calls).toEqual([["sync", "a", ["iss-c1"]], ["markReady", 7]]);
+    expect(f.prSyncs).toEqual([["a", ["iss-a2"]]]);
   });
 
   test("a workspace not polled ok this time: its siblings still sync, nothing is marked ready", () => {
@@ -80,6 +84,7 @@ describe("radarBus", () => {
     const f = fakeHandle();
     radarBus(f.handle, seenFn([])).forget("a");
     expect(f.calls).toEqual([["sync", "a", []]]);
+    expect(f.prSyncs).toEqual([["a", []]]);
   });
 });
 
