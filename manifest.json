@@ -3,7 +3,7 @@
   "title": "Linear Radar",
   "description": "Linear issues that involve you, unseen first",
   "icon": "linear",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "contributes": {
     "events": [
       {
@@ -29,6 +29,7 @@
         "description": "A GitHub pull request is linked to an open Linear issue assigned to you (for example a coding agent the issue is delegated to opened it). Fires once per issue, when its first PR is linked; an issue that already had a PR when the workspace was first synced never fires.",
         "version": 1,
         "key": "One per Linear issue (its id)",
+        "links": ["pr"],
         "fields": [
           { "name": "team", "label": "Team key", "type": "string" },
           { "name": "label", "label": "Label", "type": "string", "multi": true },

@@ -88,6 +88,8 @@ export function toPrEvent(r: IssueRow, at: string): BusEventInput {
       repo: [...new Set(r.prs.map(repoOf))],
     },
     brief: { title: `Review ${r.identifier}: ${r.title}`, body: prBody(r) },
+    // Lets a listener skip a PR some item already carries (one issue, one PR owner).
+    links: { pr: r.prs[0] },
   };
 }
 

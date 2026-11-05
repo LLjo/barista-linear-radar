@@ -32,7 +32,8 @@ Both events also carry `delegate`: the Linear agent the issue is delegated to ("
 **PR linked to my Linear issue** (`linear-radar:pr-linked-for-me`, keyed by the Linear issue) fires when a GitHub
 pull request is first linked to an open issue assigned to you, for example when a coding agent the issue is
 delegated to opens one. It carries team, label, priority, project, workspace, delegate, creator and repo
-(`owner/name` of each linked PR), and its brief lists the PR links. Issues that already had a PR when the
+(`owner/name` of each linked PR), and its brief lists the PR links. It links the first PR, so Automations skips
+an issue whose PR a Barista item already carries. Issues that already had a PR when the
 workspace was first synced never fire; an older issue that gets its first PR later does.
 
 One limit: Linear Radar reads the newest 50 issues per list and the newest 100 notifications. Once a

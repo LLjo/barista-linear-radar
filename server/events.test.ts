@@ -41,6 +41,7 @@ describe("the manifest event", () => {
     expect(events.map((d) => d.id)).toEqual([EVENT_ID, PR_EVENT_ID]);
     expect(events[0]).toMatchObject({ version: 1, key: "One per Linear issue (its id)" });
     expect(events[0].fields).toHaveLength(8);
+    expect(events[1].links).toEqual(["pr"]);
     expect(events[1].fields.map((f) => f.name)).toEqual(["team", "label", "priority", "project", "workspace", "delegate", "creator", "repo"]);
   });
 
@@ -176,6 +177,7 @@ describe("prEvents (PR linked to my issue)", () => {
       url: "https://github.com/acme/web/pull/88",
       at: NEW,
       fields: { team: "WEB", delegate: "Codey", repo: ["acme/web"] },
+      links: { pr: "https://github.com/acme/web/pull/88" },
     });
     expect(ev[0].brief!.body.split("\n")[0]).toBe("Pull requests linked in Linear: https://github.com/acme/web/pull/88");
     expect(ev[0].brief!.body).toContain("Delegate Codey");
