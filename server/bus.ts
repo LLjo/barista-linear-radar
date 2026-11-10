@@ -1,5 +1,5 @@
 import type { BusHandle } from "@barista/plugin-sdk";
-import { allPolledOk, EVENT_ID, issueIds, PR_EVENT_ID, prEvents, workspaceEvents } from "./events.js";
+import { allPolledOk, EVENT_ID, issueIds, MENTION_EVENT_ID, mentionEvents, PR_EVENT_ID, prEvents, workspaceEvents } from "./events.js";
 import type { Lists, Snapshot, WorkspaceRecord } from "./types.js";
 import type { FirstSeen } from "./workspaces.js";
 
@@ -28,12 +28,14 @@ export function radarBus(bus: RadarBusHandle, firstSeen: (ids: string[]) => Map<
       for (const { w, lists } of good) {
         bus.sync(EVENT_ID, w.id, workspaceEvents(lists, firstSeen(issueIds(lists))));
         bus.sync(PR_EVENT_ID, w.id, prEvents(lists, s.fetchedAt ?? new Date().toISOString()));
+        bus.sync(MENTION_EVENT_ID, w.id, mentionEvents(lists));
       }
       if (allPolledOk(s)) bus.markReady(token);
     },
     forget(workspaceId) {
       bus.sync(EVENT_ID, workspaceId, []);
       bus.sync(PR_EVENT_ID, workspaceId, []);
+      bus.sync(MENTION_EVENT_ID, workspaceId, []);
     },
   };
 }

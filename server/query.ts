@@ -14,7 +14,7 @@ export const RADAR_QUERY = `query Radar($assigned: IssueFilter!, $created: Issue
   subscribed: issues(first: 50, orderBy: updatedAt, filter: $subscribed) { nodes { ...Iss } pageInfo { hasNextPage } }
   notifications(first: ${NOTIFICATIONS_PAGE}, orderBy: updatedAt) {
     nodes { id type readAt snoozedUntilAt createdAt actor { name }
-      ... on IssueNotification { issueId issue { ...Iss } } }
+      ... on IssueNotification { issueId issue { ...Iss } comment { id body url user { name } } } }
   }
 }
 fragment Iss on Issue {
@@ -93,6 +93,8 @@ export interface GqlNotification {
   actor?: { name: string } | null;
   issueId?: string | null;
   issue?: GqlIssue | null;
+  /** The comment that mentions me, on a comment mention. */
+  comment?: { id: string; body: string; url: string; user?: { name: string } | null } | null;
 }
 
 export interface RadarData {

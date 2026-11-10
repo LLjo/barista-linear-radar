@@ -78,11 +78,25 @@ export interface IssueRow {
   creatorName?: string;
 }
 
+/** One @mention of me: an issue description or a comment, whatever state the issue is in. */
+export interface MentionNote {
+  /** Linear's notification id: one event per mention. */
+  id: string;
+  kind: "issue" | "comment";
+  /** Who mentioned me, "" when Linear doesn't say. */
+  by: string;
+  at: string;
+  issue: IssueRow;
+  comment?: { body: string; url: string };
+}
+
 export interface Lists {
   assigned: IssueRow[];
   mentions: IssueRow[];
   created: IssueRow[];
   more: Record<ListId, boolean>;
+  /** Every @mention notification in the page, newest first (the mention event's source). */
+  mentionNotes?: MentionNote[];
   /** A full page of notifications came back (first_seen only, see `isCut`). */
   notificationsCut?: boolean;
 }

@@ -2,7 +2,7 @@ import { describe, expect, spyOn, test } from "bun:test";
 import type { BusEventInput } from "@barista/plugin-sdk";
 import radar from "./fixtures/radar.json";
 import { onWatchesChanged, radarBus, type PollBus } from "./bus.js";
-import { EVENT_ID, PR_EVENT_ID } from "./events.js";
+import { EVENT_ID, MENTION_EVENT_ID, PR_EVENT_ID } from "./events.js";
 import { mapRadar } from "./map.js";
 import { createPoller, type PollerDeps } from "./poll-loop.js";
 import type { RadarData } from "./query.js";
@@ -22,16 +22,19 @@ const ws = (id: string, over: Partial<WorkspaceRecord> = {}): WorkspaceRecord =>
 function fakeHandle() {
   const calls: (["sync", string, string[]] | ["markReady", number] | ["readToken", number])[] = [];
   const prSyncs: [string, string[]][] = [];
+  const mentionSyncs: [string, string[]][] = [];
   let gen = 0;
   return {
     calls,
     prSyncs,
+    mentionSyncs,
     bump: () => ++gen,
     handle: {
       sync(event: string, scope: string, events: BusEventInput[]) {
-        expect([EVENT_ID, PR_EVENT_ID]).toContain(event);
+        expect([EVENT_ID, PR_EVENT_ID, MENTION_EVENT_ID]).toContain(event);
         if (event === EVENT_ID) calls.push(["sync", scope, events.map((e) => e.key)]);
-        else prSyncs.push([scope, events.map((e) => e.key)]);
+        else if (event === PR_EVENT_ID) prSyncs.push([scope, events.map((e) => e.key)]);
+        else mentionSyncs.push([scope, events.map((e) => e.key)]);
         return [];
       },
       readToken() {
