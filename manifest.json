@@ -3,7 +3,7 @@
   "title": "Linear Radar",
   "description": "Linear issues that involve you, unseen first",
   "icon": "linear",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "contributes": {
     "events": [
       {
@@ -39,6 +39,25 @@
           { "name": "delegate", "label": "Delegate (agent)", "type": "string" },
           { "name": "creator", "label": "Creator", "type": "string" },
           { "name": "repo", "label": "PR repo (owner/name)", "type": "string", "multi": true }
+        ]
+      },
+      {
+        "id": "mentioned-me",
+        "label": "Someone mentioned me on a Linear issue",
+        "description": "Someone @mentions you in a Linear issue's description or in a comment, on any issue, open or closed. Fires once per mention, with the comment text in the brief. Read from your latest 100 Linear notifications: mentions made before the workspace's first sync never fire.",
+        "version": 1,
+        "key": "One per Linear mention notification (its id)",
+        "fields": [
+          { "name": "team", "label": "Team key", "type": "string" },
+          { "name": "label", "label": "Label", "type": "string", "multi": true },
+          { "name": "priority", "label": "Priority", "type": "enum", "options": ["urgent", "high", "medium", "low", "none"] },
+          { "name": "assignee", "label": "Assignee", "type": "enum", "options": ["me", "someone else", "unassigned"] },
+          { "name": "state", "label": "Issue state", "type": "enum", "options": ["triage", "backlog", "unstarted", "started", "completed", "canceled"] },
+          { "name": "project", "label": "Project", "type": "string" },
+          { "name": "workspace", "label": "Workspace", "type": "string" },
+          { "name": "kind", "label": "Mentioned in", "type": "enum", "options": ["issue", "comment"] },
+          { "name": "by", "label": "Mentioned by", "type": "string" },
+          { "name": "delegate", "label": "Delegate (agent)", "type": "string" }
         ]
       }
     ]

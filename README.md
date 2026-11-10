@@ -27,7 +27,7 @@ label, priority, assignee, project, workspace and list, so a rule can filter on 
 in your lists when a workspace was added are never logged as new. Every poll syncs the plugin's event log, so
 it costs no extra Linear requests.
 Needs Barista with the plugin event bus (#1442); Linear Radar 0.1 served the older request/reply trigger.
-Both events also carry `delegate`: the Linear agent the issue is delegated to ("" when none).
+All three events carry `delegate`: the Linear agent the issue is delegated to ("" when none).
 
 **PR linked to my Linear issue** (`linear-radar:pr-linked-for-me`, keyed by the Linear issue) fires when a GitHub
 pull request is first linked to an open issue assigned to you, for example when a coding agent the issue is
@@ -35,6 +35,14 @@ delegated to opens one. It carries team, label, priority, project, workspace, de
 (`owner/name` of each linked PR), and its brief lists the PR links. It links the first PR, so Automations skips
 an issue whose PR a Barista item already carries. Issues that already had a PR when the
 workspace was first synced never fire; an older issue that gets its first PR later does.
+
+**Someone mentioned me on a Linear issue** (`linear-radar:mentioned-me`, keyed by the Linear notification) fires
+when someone @mentions you in an issue's description or in a comment, on any issue, open or closed. Each mention
+is its own event, so two comments on one issue fire twice. It carries team, label, priority, assignee, state
+(the issue's state type, e.g. `completed`), project, workspace, delegate, kind (`issue` or `comment`) and by (who
+wrote it). Its brief quotes the comment as untrusted input, followed by the issue, and links the comment. Mentions
+are read from the newest 100 notifications; mentions that were already there when the workspace was first synced
+(or when you upgraded to Linear Radar 0.4) never fire.
 
 One limit: Linear Radar reads the newest 50 issues per list and the newest 100 notifications. Once a
 workspace has more than that, it cannot tell an old issue that was always there from one that just

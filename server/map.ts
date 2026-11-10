@@ -1,5 +1,5 @@
 import { NOTIFICATIONS_PAGE, type GqlIssue, type GqlNotification, type RadarData } from "./query.js";
-import type { IssueRow, Lists, Priority, Why } from "./types.js";
+import type { IssueRow, Lists, MentionNote, Priority, Why } from "./types.js";
 
 const MENTION_TYPES: Record<string, Why> = { issueMention: "mention", issueCommentMention: "comment-mention" };
 const CLOSED = new Set(["completed", "canceled"]);
@@ -20,6 +20,19 @@ export const prsOf = (i: GqlIssue): string[] => [
 ];
 
 const notificationIssueId = (n: GqlNotification) => n.issueId ?? n.issue?.id ?? null;
+
+/** Every @mention of me in the page, newest first. Closed issues count: a mention on a done issue is still a question for me. */
+export function mentionNotes(notes: GqlNotification[], ws: IssueRow["workspace"]): MentionNote[] {
+  const out: MentionNote[] = [];
+  for (const n of notes) {
+    if (!MENTION_TYPES[n.type] || !n.issue) continue;
+    const kind = n.type === "issueCommentMention" ? "comment" : "issue";
+    const note: MentionNote = { id: n.id, kind, by: n.actor?.name ?? n.comment?.user?.name ?? "", at: n.createdAt, issue: toRow(n.issue, ws, !n.readAt) };
+    if (kind === "comment" && n.comment) note.comment = { body: n.comment.body ?? "", url: n.comment.url ?? "" };
+    out.push(note);
+  }
+  return out.sort((a, b) => b.at.localeCompare(a.at));
+}
 
 /** An issue is unseen while one of its notifications is unread and not snoozed into the future. */
 export function unseenIds(notifications: GqlNotification[], now: number): Set<string> {
@@ -104,6 +117,7 @@ export function mapRadar(data: RadarData, ws: IssueRow["workspace"], now = Date.
       created: !!data.created.pageInfo?.hasNextPage,
       mentions: !!data.subscribed.pageInfo?.hasNextPage,
     },
+    mentionNotes: mentionNotes(notes, ws),
     notificationsCut: notes.length >= NOTIFICATIONS_PAGE,
   };
 }

@@ -828,6 +828,75 @@
           },
           "issueId": null,
           "issue": null
+        },
+        {
+          "id": "n-cm1",
+          "type": "issueCommentMention",
+          "readAt": null,
+          "snoozedUntilAt": null,
+          "createdAt": "2026-11-03T08:00:00.000Z",
+          "actor": {
+            "name": "Jo Park"
+          },
+          "issueId": "iss-done1",
+          "issue": {
+            "id": "iss-done1",
+            "identifier": "ENG-390",
+            "title": "Email change keeps the old address",
+            "url": "https://linear.app/acme/issue/eng-390/x",
+            "priority": 1,
+            "priorityLabel": "",
+            "createdAt": "2026-10-20T10:00:00.000Z",
+            "updatedAt": "2026-11-03T09:00:00.000Z",
+            "description": "Fixed on the account page.",
+            "state": {
+              "name": "Done",
+              "type": "completed",
+              "color": "#999999"
+            },
+            "team": {
+              "id": "team-ENG",
+              "key": "ENG",
+              "name": "ENG"
+            },
+            "cycle": {
+              "number": 42,
+              "name": null,
+              "isActive": true,
+              "startsAt": "2026-10-27T00:00:00.000Z",
+              "endsAt": "2026-11-10T00:00:00.000Z"
+            },
+            "project": {
+              "id": "proj-1",
+              "name": "Payments v2"
+            },
+            "labels": {
+              "nodes": [
+                {
+                  "name": "bug",
+                  "color": "#888888"
+                }
+              ]
+            },
+            "assignee": {
+              "id": "user-me",
+              "name": "Alex Doe",
+              "isMe": true
+            },
+            "creator": {
+              "id": "user-sam",
+              "name": "Sam Rivera",
+              "isMe": false
+            }
+          },
+          "comment": {
+            "id": "c-1",
+            "body": "@alex the database column still keeps the old email.\nCould you make sure it's fixed?",
+            "url": "https://linear.app/acme/issue/eng-390/x#comment-c1",
+            "user": {
+              "name": "Jo Park"
+            }
+          }
         }
       ]
     }
