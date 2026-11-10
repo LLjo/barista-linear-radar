@@ -64,6 +64,7 @@ describe("radarBus", () => {
     b.polled([{ w: ws("a"), lists }], snap([ws("a")]), 7);
     expect(f.calls).toEqual([["sync", "a", ["iss-c1"]], ["markReady", 7]]);
     expect(f.prSyncs).toEqual([["a", ["iss-a2"]]]);
+    expect(f.mentionSyncs).toEqual([["a", ["n-cm1", "n3", "n2", "n4", "n7"]]]);
   });
 
   test("a workspace not polled ok this time: its siblings still sync, nothing is marked ready", () => {
@@ -88,6 +89,7 @@ describe("radarBus", () => {
     radarBus(f.handle, seenFn([])).forget("a");
     expect(f.calls).toEqual([["sync", "a", []]]);
     expect(f.prSyncs).toEqual([["a", []]]);
+    expect(f.mentionSyncs).toEqual([["a", []]]);
   });
 });
 

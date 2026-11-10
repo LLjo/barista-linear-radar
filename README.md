@@ -27,7 +27,7 @@ label, priority, assignee, project, workspace and list, so a rule can filter on 
 in your lists when a workspace was added are never logged as new. Every poll syncs the plugin's event log, so
 it costs no extra Linear requests.
 Needs Barista with the plugin event bus (#1442); Linear Radar 0.1 served the older request/reply trigger.
-Both events also carry `delegate`: the Linear agent the issue is delegated to ("" when none).
+All three events carry `delegate`: the Linear agent the issue is delegated to ("" when none).
 
 **PR linked to my Linear issue** (`linear-radar:pr-linked-for-me`, keyed by the Linear issue) fires when a GitHub
 pull request is first linked to an open issue assigned to you, for example when a coding agent the issue is
