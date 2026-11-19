@@ -130,7 +130,7 @@
 	</div>
 	{#if skipError}<div class="err">{skipError}</div>{:else if skipNote}<div class="ok-note">{skipNote}</div>{/if}
 	<div class="help">
-		The <b>The agent on my Linear issue commented</b> automation event fires when the agent an issue of yours is delegated to comments on it.
+		The Automations event <b>The agent on my Linear issue commented</b> fires when an agent comments on an issue of yours that is delegated to it.
 		Comments matching this regular expression (case-insensitive) never fire it, for example an agent's periodic status or cost comments.
 		Leave it empty to skip nothing.
 	</div>
