@@ -188,18 +188,35 @@ export function skipRegex(pattern: string): RegExp | null {
   }
 }
 
+export interface DelegateFilter {
+  /** The skip setting as a regex ({@link skipRegex}); null skips nothing. */
+  skip?: RegExp | null;
+  /** When the skip pattern last changed: an older comment never fires, so loosening or clearing it fires nothing old. */
+  skipSince?: string | null;
+  /** The workspace's previous good poll (before this one), null on its first. */
+  prevPoll?: string | null;
+}
+
+const later = (a: string, b: string | null | undefined) => (b && Date.parse(b) > Date.parse(a) ? b : a);
+const earlier = (a: string, b: string | null | undefined) => (b && Date.parse(b) < Date.parse(a) ? b : a);
+
 /**
  * Every delegate comment on my issues stands in the delegate event's log, keyed by the comment: the SDK's first-read
- * rule keeps what stood at the first sync `initial`. On top of it, a comment older than its issue's first-seen time is
- * never synced (an issue newly assigned to me, already delegated, brings no flood of old comments), nor one the skip
- * regex matches (an agent's periodic status or cost comments).
+ * rule keeps what stood at the first sync `initial`. On top of it a comment fires only when it is newer than:
+ * - its issue's cutoff: for an issue that stood at the workspace's first poll, that poll; for one that showed up later,
+ *   the poll before the one that first saw it (a reply posted between those polls is news, older comments brought
+ *   along by a newly assigned, already delegated issue are not);
+ * - the last change of the skip pattern (a comment skipped before never fires because the pattern was loosened).
+ * And never when the skip regex matches it (an agent's periodic status or cost comments).
  */
-export function delegateEvents(lists: Lists, seen: Map<string, FirstSeen>, skip: RegExp | null): BusEventInput[] {
+export function delegateEvents(lists: Lists, seen: Map<string, FirstSeen>, opts: DelegateFilter = {}): BusEventInput[] {
   const out: BusEventInput[] = [];
   for (const c of lists.delegateComments ?? []) {
     const f = seen.get(c.issue.id);
-    if (!f || Date.parse(c.at) < Date.parse(f.at)) continue;
-    if (skip?.test(c.body)) continue;
+    if (!f) continue;
+    const cutoff = later(f.initial ? f.at : earlier(f.at, opts.prevPoll), opts.skipSince);
+    if (Date.parse(c.at) < Date.parse(cutoff)) continue;
+    if (opts.skip?.test(c.body)) continue;
     out.push(toDelegateEvent(c));
   }
   return out;

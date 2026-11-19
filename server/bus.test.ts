@@ -71,14 +71,21 @@ describe("radarBus", () => {
     expect(f.delegateSyncs).toEqual([["a", ["cd-cost", "cd-reply", "cd-top"]]]);
   });
 
-  test("the skip setting is read at each poll", () => {
+  test("the skip setting is read at each poll; clearing it later fires nothing it skipped", () => {
     const f = fakeHandle();
-    let pattern = "cost report";
-    const b = radarBus(f.handle, seenFn([]), () => pattern);
+    let setting = { pattern: "cost report", since: null as string | null };
+    const b = radarBus(f.handle, seenFn([]), () => setting);
     b.polled([{ w: ws("a"), lists }], snap([ws("a")]), 1);
-    pattern = "";
+    setting = { pattern: "", since: "2026-11-03T11:30:00.000Z" };
     b.polled([{ w: ws("a"), lists }], snap([ws("a")]), 2);
-    expect(f.delegateSyncs).toEqual([["a", ["cd-reply", "cd-top"]], ["a", ["cd-cost", "cd-reply", "cd-top"]]]);
+    expect(f.delegateSyncs).toEqual([["a", ["cd-reply", "cd-top"]], ["a", []]]);
+  });
+
+  test("the workspace's previous good poll is the cutoff for an issue first seen since", () => {
+    const f = fakeHandle();
+    const fresh = (ids: string[]) => new Map<string, FirstSeen>(ids.map((id) => [id, { workspaceId: "a", at: "2026-11-03T11:30:00.000Z", initial: false }]));
+    radarBus(f.handle, fresh).polled([{ w: ws("a", { checkedAt: "2026-11-03T10:45:00.000Z" }), lists }], snap([ws("a")]), 1);
+    expect(f.delegateSyncs).toEqual([["a", ["cd-cost", "cd-reply"]]]);
   });
 
   test("a workspace not polled ok this time: its siblings still sync, nothing is marked ready", () => {

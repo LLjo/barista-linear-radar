@@ -242,7 +242,7 @@ describe("mentionEvents (someone mentioned me)", () => {
 });
 
 describe("delegateEvents (the agent on my issue commented)", () => {
-  const ev = (skip: RegExp | null = null, s = seen()) => delegateEvents(lists, s, skip);
+  const ev = (skip: RegExp | null = null, s = seen(), more: { skipSince?: string; prevPoll?: string } = {}) => delegateEvents(lists, s, { skip, ...more });
 
   test("one event per comment by the issue's delegate on my issue, newest first", () => {
     // cd-other: another agent; cd-theirs: the delegate, on an issue that is not mine; cd-old: before the issue was first seen.
@@ -252,6 +252,18 @@ describe("delegateEvents (the agent on my issue commented)", () => {
   test("a comment older than its issue's first-seen time never fires (no flood when an issue arrives)", () => {
     expect(ev(null, seen({ "iss-a2": "2026-11-03T10:45:00.000Z" })).map((e) => e.key)).toEqual(["cd-cost", "cd-reply"]);
     expect(ev(null, new Map()).map((e) => e.key)).toEqual([]);
+  });
+
+  test("an issue first seen after the workspace's first poll: a reply since the poll before that one still fires", () => {
+    const fresh = seen({ "iss-a2": "2026-11-03T11:30:00.000Z" });
+    expect(ev(null, fresh).map((e) => e.key)).toEqual([]);
+    expect(ev(null, fresh, { prevPoll: "2026-11-03T10:45:00.000Z" }).map((e) => e.key)).toEqual(["cd-cost", "cd-reply"]);
+    // An issue that stood at the first poll keeps that poll as its cutoff, whatever the previous poll.
+    expect(ev(null, seen(), { prevPoll: "2026-11-03T10:45:00.000Z" }).map((e) => e.key)).toEqual(["cd-cost", "cd-reply", "cd-top"]);
+  });
+
+  test("a comment older than the skip pattern's last change never fires (loosening it fires nothing old)", () => {
+    expect(ev(null, seen(), { skipSince: "2026-11-03T11:10:00.000Z" }).map((e) => e.key)).toEqual(["cd-cost"]);
   });
 
   test("the skip regex drops matching comments, case-insensitive; empty or broken skips nothing", () => {
@@ -292,7 +304,7 @@ describe("delegateEvents (the agent on my issue commented)", () => {
   test("a comment link that isn't Linear's falls back to the issue's", () => {
     const c = lists.delegateComments![0];
     const odd = { ...lists, delegateComments: [{ ...c, url: "https://evil.example/x" }] };
-    expect(delegateEvents(odd, seen(), null)[0].url).toBe(c.issue.url);
+    expect(delegateEvents(odd, seen())[0].url).toBe(c.issue.url);
   });
 
   test("every field survives the bus's own field cleaner unchanged", () => {

@@ -155,6 +155,19 @@ describe("routes", () => {
     expect((await call("PUT", "/settings", { skipDelegateComments: "" })).json().skipDelegateComments).toBe("");
   });
 
+  test("the skip pattern's change time moves only when the pattern changes", async () => {
+    const { getDelegateSkip } = await import("./settings.js");
+    await call("PUT", "/settings", { skipDelegateComments: "status" });
+    const since = getDelegateSkip().since;
+    expect(getDelegateSkip()).toEqual({ pattern: "status", since: expect.any(String) });
+    await Bun.sleep(5);
+    await call("PUT", "/settings", { refreshSec: 300 });
+    await call("PUT", "/settings", { skipDelegateComments: "status" });
+    expect(getDelegateSkip().since).toBe(since);
+    await call("PUT", "/settings", { skipDelegateComments: "" });
+    expect(getDelegateSkip().since! > since!).toBe(true);
+  });
+
   test("replace: a key of the same workspace replaces it; a rejected one is refused", async () => {
     const r = await call("PUT", "/workspaces/org-acme/key", { apiKey: KEY2 });
     expect(r.status).toBe(200);

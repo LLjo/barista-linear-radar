@@ -40,9 +40,10 @@ const handle = serveBus(
   { storage, name: "linear-radar", contributes: manifest.contributes },
   { publish: (_s, e) => void published.push(e), serve: () => ({ stop() {} }) },
 );
-let skip = "";
-// Every issue stood at the workspace's first poll.
-const seen = (ids: string[]) => new Map<string, FirstSeen>(ids.map((id) => [id, { workspaceId: WS.id, at: FIRST_POLL, initial: true }]));
+let skip = { pattern: "", since: null as string | null };
+/** Every issue stood at the workspace's first poll, unless a test says when it was first seen. */
+let firstSeenOf: (id: string) => FirstSeen = () => ({ workspaceId: WS.id, at: FIRST_POLL, initial: true });
+const seen = (ids: string[]) => new Map<string, FirstSeen>(ids.map((id) => [id, firstSeenOf(id)]));
 const bus = radarBus(handle, seen, () => skip);
 
 /** The fixture with extra comments on WEB-77 (iss-a2, delegated to the agent). */
@@ -54,11 +55,11 @@ const comment = (id: string, body: string, at: string, user = AGENT): GqlComment
   ({ id, body, url: `https://linear.app/acme/issue/web-77/x#comment-${id}`, createdAt: at, user, parent: null });
 
 /** One good poll; answers the keys a listener takes as news. */
-function poll(data: RadarData): string[] {
+function poll(data: RadarData, w: WorkspaceRecord = WS): string[] {
   const lists = mapRadar(data, { id: WS.id, name: WS.name, urlKey: WS.urlKey }, NOW);
   const s = buildSnapshot([WS], new Map([[WS.id, { good: true, lists }]]), { fetchedAt: new Date(NOW).toISOString(), booted: true, now: NOW });
   const from = published.length;
-  bus.polled([{ w: WS, lists }], s, handle.readToken());
+  bus.polled([{ w, lists }], s, handle.readToken());
   return published.slice(from).filter((e) => e.event === DELEGATE_EVENT_ID && !e.initial && !e.gone && e.rev === 1).map((e) => e.key);
 }
 
@@ -82,9 +83,26 @@ describe("delegate-replied through the real event log", () => {
     expect(poll(theirs)).toEqual([]);
   });
 
-  test("a comment the skip regex matches never fires", () => {
-    skip = "^\\*\\*.*cost report";
-    expect(poll(withComments([comment("cd-cost-2", "**Codey Cost Report**\nTokens: 3k", "2026-11-03T11:58:00.000Z")]))).toEqual([]);
-    skip = "";
+  test("a comment the skip regex matches never fires, not even once the pattern is loosened or cleared", () => {
+    skip = { pattern: "^\\*\\*.*cost report", since: "2026-11-03T11:00:00.000Z" };
+    const data = withComments([comment("cd-cost-2", "**Codey Cost Report**\nTokens: 3k", "2026-11-03T11:58:00.000Z")]);
+    expect(poll(data)).toEqual([]);
+    // Cleared at 12:00 (the Save polls at once): the cost comment from before stays quiet.
+    skip = { pattern: "", since: "2026-11-03T12:00:00.000Z" };
+    expect(poll(data)).toEqual([]);
+    // A comment after the change fires.
+    expect(poll(withComments([comment("cd-after", "Next question.", "2026-11-03T12:01:00.000Z")]))).toEqual(["cd-after"]);
+    skip = { pattern: "", since: null };
+  });
+
+  test("the first reply on a newly delegated issue fires when it came before the poll that first saw the issue", () => {
+    // WEB-77 first showed up at 12:10 (not at the workspace's first poll); the poll before that ran at 12:05.
+    firstSeenOf = (id) => (id === "iss-a2" ? { workspaceId: WS.id, at: "2026-11-03T12:10:00.000Z", initial: false } : { workspaceId: WS.id, at: FIRST_POLL, initial: true });
+    const data = withComments([
+      comment("cd-first", "Before I start: which branch?", "2026-11-03T12:07:00.000Z"),
+      comment("cd-older", "Picked this up.", "2026-11-03T12:02:00.000Z"),
+    ]);
+    expect(poll(data, { ...WS, checkedAt: "2026-11-03T12:05:00.000Z" })).toEqual(["cd-first"]);
+    firstSeenOf = () => ({ workspaceId: WS.id, at: FIRST_POLL, initial: true });
   });
 });

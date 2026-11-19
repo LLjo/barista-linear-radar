@@ -51,10 +51,12 @@ only, not for other people's or other agents' comments, and not on issues assign
 its own event. It carries team, label, priority, assignee, project, workspace, delegate and author (the agent's
 name). Its brief quotes the issue, then the comment it replies to (for a thread reply), then the agent's comment, all
 as untrusted input, and links the comment. Comments that were already there when the workspace was first synced (or
-when you upgraded to Linear Radar 0.5), or that predate the issue first showing up in your lists, never fire.
+when you upgraded to Linear Radar 0.5) never fire. For an issue that shows up in your lists later (newly assigned,
+already delegated), only comments since the poll before it showed up fire, not its older thread.
 To ignore an agent's periodic status or cost comments, set a skip pattern under **Linear Radar → ⚙ Settings →
 Agent comments**: a regular expression, case-insensitive, matched against the comment's text (for example
-`^\*\*.*cost report`). Empty skips nothing. Linear Radar reads the newest 20 agent comments on each of your newest 25
+`^\*\*.*cost report`). Empty skips nothing. Changing the pattern never fires a comment made before the change, so
+loosening or clearing it does not replay the comments it skipped. Linear Radar reads the newest 20 agent comments on each of your newest 25
 open delegated issues.
 
 One limit: Linear Radar reads the newest 50 issues per list and the newest 100 notifications. Once a

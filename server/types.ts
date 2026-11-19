@@ -10,6 +10,12 @@ export interface Settings {
   skipDelegateComments: string;
 }
 
+/** The delegate-replied skip pattern and when it last changed (null: never set). */
+export interface DelegateSkip {
+  pattern: string;
+  since: string | null;
+}
+
 export type ListId = "assigned" | "mentions" | "created";
 export const LIST_IDS: readonly ListId[] = ["assigned", "mentions", "created"];
 

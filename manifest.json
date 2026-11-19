@@ -63,7 +63,7 @@
       {
         "id": "delegate-replied",
         "label": "The agent on my Linear issue commented",
-        "description": "The agent an issue assigned to you is delegated to posts a comment on it: top level or a thread reply, agent-session replies included. Fires once per comment, with the issue, the comment and the comment it replies to in the brief. Comments that match the skip pattern in Linear Radar's settings never fire, nor comments made before the workspace's first sync or before the issue first showed up in your lists.",
+        "description": "The agent an issue assigned to you is delegated to posts a comment on it: top level or a thread reply, agent-session replies included. Fires once per comment, with the issue, the comment and the comment it replies to in the brief. Comments that match the skip pattern in Linear Radar's settings never fire, nor comments made before the workspace's first sync, before the poll ahead of the one that first saw the issue, or before the skip pattern last changed.",
         "version": 1,
         "key": "One per Linear comment (its id)",
         "fields": [
