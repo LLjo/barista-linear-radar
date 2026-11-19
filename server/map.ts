@@ -1,5 +1,5 @@
-import { NOTIFICATIONS_PAGE, type GqlIssue, type GqlNotification, type RadarData } from "./query.js";
-import type { IssueRow, Lists, MentionNote, Priority, Why } from "./types.js";
+import { NOTIFICATIONS_PAGE, type GqlDelegated, type GqlIssue, type GqlNotification, type RadarData } from "./query.js";
+import type { DelegateComment, IssueRow, Lists, MentionNote, Priority, Why } from "./types.js";
 
 const MENTION_TYPES: Record<string, Why> = { issueMention: "mention", issueCommentMention: "comment-mention" };
 const CLOSED = new Set(["completed", "canceled"]);
@@ -30,6 +30,28 @@ export function mentionNotes(notes: GqlNotification[], ws: IssueRow["workspace"]
     const note: MentionNote = { id: n.id, kind, by: n.actor?.name ?? n.comment?.user?.name ?? "", at: n.createdAt, issue: toRow(n.issue, ws, !n.readAt) };
     if (kind === "comment" && n.comment) note.comment = { body: n.comment.body ?? "", url: n.comment.url ?? "" };
     out.push(note);
+  }
+  return out.sort((a, b) => b.at.localeCompare(a.at));
+}
+
+/**
+ * Every comment the issue's CURRENT delegate wrote on an issue of my Assigned list, newest first. The issue row is the
+ * list's own (assignee "me" checked again here); a delegated issue that is not in the list, or a comment by anyone
+ * else (another agent, a person), is left out.
+ */
+export function delegateComments(delegated: GqlDelegated[], assigned: GqlIssue[], rows: IssueRow[]): DelegateComment[] {
+  const issues = new Map(assigned.map((i) => [i.id, i]));
+  const mine = new Map(rows.filter((r) => r.assignee === "me").map((r) => [r.id, r]));
+  const out: DelegateComment[] = [];
+  for (const d of delegated) {
+    const issue = issues.get(d.id), row = mine.get(d.id), agent = issue?.delegate;
+    if (!issue || !row || !agent?.id) continue;
+    for (const c of d.comments?.nodes ?? []) {
+      if (c.user?.id !== agent.id) continue;
+      const note: DelegateComment = { id: c.id, author: c.user.name || agent.name, at: c.createdAt, body: c.body ?? "", url: c.url ?? "", issue: row };
+      if (c.parent) note.parent = { author: c.parent.user?.name ?? "", body: c.parent.body ?? "" };
+      out.push(note);
+    }
   }
   return out.sort((a, b) => b.at.localeCompare(a.at));
 }
@@ -118,6 +140,7 @@ export function mapRadar(data: RadarData, ws: IssueRow["workspace"], now = Date.
       mentions: !!data.subscribed.pageInfo?.hasNextPage,
     },
     mentionNotes: mentionNotes(notes, ws),
+    delegateComments: delegateComments(data.delegated?.nodes ?? [], data.assigned.nodes, assigned),
     notificationsCut: notes.length >= NOTIFICATIONS_PAGE,
   };
 }

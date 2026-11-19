@@ -1,8 +1,13 @@
 export const REFRESH_CHOICES = [60, 300, 900] as const;
 export type RefreshSec = (typeof REFRESH_CHOICES)[number];
 
+/** The longest skip pattern a setting holds. */
+export const SKIP_PATTERN_MAX = 200;
+
 export interface Settings {
   refreshSec: RefreshSec;
+  /** A regex (case-insensitive) on a delegate comment's text: a match never fires delegate-replied. "" = skip none. */
+  skipDelegateComments: string;
 }
 
 export type ListId = "assigned" | "mentions" | "created";
@@ -90,6 +95,20 @@ export interface MentionNote {
   comment?: { body: string; url: string };
 }
 
+/** A comment the issue's delegate (an agent) posted on an issue assigned to me: top level or a thread reply. */
+export interface DelegateComment {
+  /** Linear's comment id: one event per comment. */
+  id: string;
+  /** The delegate's name. */
+  author: string;
+  at: string;
+  body: string;
+  url: string;
+  /** The comment it replies to, when it is a thread reply. */
+  parent?: { author: string; body: string };
+  issue: IssueRow;
+}
+
 export interface Lists {
   assigned: IssueRow[];
   mentions: IssueRow[];
@@ -97,6 +116,8 @@ export interface Lists {
   more: Record<ListId, boolean>;
   /** Every @mention notification in the page, newest first (the mention event's source). */
   mentionNotes?: MentionNote[];
+  /** Comments by the delegate on my delegated issues, newest first (the delegate-replied event's source). */
+  delegateComments?: DelegateComment[];
   /** A full page of notifications came back (first_seen only, see `isCut`). */
   notificationsCut?: boolean;
 }

@@ -7,11 +7,18 @@
 /** The notifications page size: a full page means older ones may be behind it. */
 export const NOTIFICATIONS_PAGE = 100;
 
-export const RADAR_QUERY = `query Radar($assigned: IssueFilter!, $created: IssueFilter!, $subscribed: IssueFilter!) {
+/** Delegated issues of mine whose comments are read, and the newest comments read per issue (delegate-replied). */
+export const DELEGATED_PAGE = 25;
+export const COMMENTS_PAGE = 20;
+
+export const RADAR_QUERY = `query Radar($assigned: IssueFilter!, $created: IssueFilter!, $subscribed: IssueFilter!, $delegated: IssueFilter!) {
   viewer { id name organization { id name urlKey } }
   assigned: issues(first: 50, orderBy: updatedAt, filter: $assigned) { nodes { ...Iss } pageInfo { hasNextPage } }
   created: issues(first: 50, orderBy: updatedAt, filter: $created) { nodes { ...Iss } pageInfo { hasNextPage } }
   subscribed: issues(first: 50, orderBy: updatedAt, filter: $subscribed) { nodes { ...Iss } pageInfo { hasNextPage } }
+  delegated: issues(first: ${DELEGATED_PAGE}, orderBy: updatedAt, filter: $delegated) {
+    nodes { id comments(first: ${COMMENTS_PAGE}, orderBy: createdAt, filter: { user: { app: { eq: true } } }) { nodes { id body url createdAt user { id name } parent { id body user { name } } } } }
+  }
   notifications(first: ${NOTIFICATIONS_PAGE}, orderBy: updatedAt) {
     nodes { id type readAt snoozedUntilAt createdAt actor { name }
       ... on IssueNotification { issueId issue { ...Iss } comment { id body url user { name } } } }
@@ -41,6 +48,7 @@ export interface RadarVars {
   assigned: Record<string, unknown>;
   created: Record<string, unknown>;
   subscribed: Record<string, unknown>;
+  delegated: Record<string, unknown>;
 }
 
 export function buildVars(): RadarVars {
@@ -48,6 +56,7 @@ export function buildVars(): RadarVars {
     assigned: { and: [{ assignee: { isMe: { eq: true } } }, OPEN] },
     created: { and: [{ creator: { isMe: { eq: true } } }, OPEN] },
     subscribed: { and: [{ subscribers: { some: { isMe: { eq: true } } } }, OPEN] },
+    delegated: { and: [{ assignee: { isMe: { eq: true } } }, { delegate: { null: false } }, OPEN] },
   };
 }
 
@@ -97,11 +106,29 @@ export interface GqlNotification {
   comment?: { id: string; body: string; url: string; user?: { name: string } | null } | null;
 }
 
+/** One comment on a delegated issue: top level, or a thread reply (`parent`), agent-session replies included. */
+export interface GqlComment {
+  id: string;
+  body: string | null;
+  url: string | null;
+  createdAt: string;
+  user?: { id: string; name: string } | null;
+  parent?: { id: string; body: string | null; user?: { name: string } | null } | null;
+}
+
+/** An issue of mine that is delegated to an agent, with its newest comments. */
+export interface GqlDelegated {
+  id: string;
+  comments: { nodes: GqlComment[] } | null;
+}
+
 export interface RadarData {
   viewer: Viewer;
   assigned: GqlConnection;
   created: GqlConnection;
   subscribed: GqlConnection;
+  /** Absent in a reply from before 0.5 (tests, fixtures): no delegate comments. */
+  delegated?: { nodes: GqlDelegated[] };
   notifications: { nodes: GqlNotification[] };
 }
 

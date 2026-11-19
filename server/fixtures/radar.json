@@ -441,6 +441,96 @@
         "hasNextPage": false
       }
     },
+    "delegated": {
+      "nodes": [
+        {
+          "id": "iss-a2",
+          "comments": {
+            "nodes": [
+              {
+                "id": "cd-cost",
+                "body": "**Codey cost report**\nTokens used: 12k",
+                "url": "https://linear.app/acme/issue/web-77/x#comment-cd-cost",
+                "createdAt": "2026-11-03T11:20:00.000Z",
+                "user": {
+                  "id": "agent-1",
+                  "name": "Codey"
+                },
+                "parent": null
+              },
+              {
+                "id": "cd-other",
+                "body": "I can take a look too.",
+                "url": "https://linear.app/acme/issue/web-77/x#comment-cd-other",
+                "createdAt": "2026-11-03T11:15:00.000Z",
+                "user": {
+                  "id": "agent-2",
+                  "name": "Helper Bot"
+                },
+                "parent": null
+              },
+              {
+                "id": "cd-reply",
+                "body": "Yes: keep the old endpoint until the clients move.",
+                "url": "https://linear.app/acme/issue/web-77/x#comment-cd-reply",
+                "createdAt": "2026-11-03T11:00:00.000Z",
+                "user": {
+                  "id": "agent-1",
+                  "name": "Codey"
+                },
+                "parent": {
+                  "id": "c-q",
+                  "body": "Should the old endpoint stay?",
+                  "user": {
+                    "name": "Alex Doe"
+                  }
+                }
+              },
+              {
+                "id": "cd-top",
+                "body": "Which database should the new table live in?\nThe spec doesn't say.",
+                "url": "https://linear.app/acme/issue/web-77/x#comment-cd-top",
+                "createdAt": "2026-11-03T10:30:00.000Z",
+                "user": {
+                  "id": "agent-1",
+                  "name": "Codey"
+                },
+                "parent": null
+              },
+              {
+                "id": "cd-old",
+                "body": "Starting on this.",
+                "url": "https://linear.app/acme/issue/web-77/x#comment-cd-old",
+                "createdAt": "2026-10-25T09:00:00.000Z",
+                "user": {
+                  "id": "agent-1",
+                  "name": "Codey"
+                },
+                "parent": null
+              }
+            ]
+          }
+        },
+        {
+          "id": "iss-c2",
+          "comments": {
+            "nodes": [
+              {
+                "id": "cd-theirs",
+                "body": "Done on someone else's issue.",
+                "url": "https://linear.app/acme/issue/web-77/x#comment-cd-theirs",
+                "createdAt": "2026-11-03T10:45:00.000Z",
+                "user": {
+                  "id": "agent-1",
+                  "name": "Codey"
+                },
+                "parent": null
+              }
+            ]
+          }
+        }
+      ]
+    },
     "notifications": {
       "nodes": [
         {

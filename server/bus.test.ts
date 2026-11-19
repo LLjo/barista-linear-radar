@@ -2,7 +2,7 @@ import { describe, expect, spyOn, test } from "bun:test";
 import type { BusEventInput } from "@barista/plugin-sdk";
 import radar from "./fixtures/radar.json";
 import { onWatchesChanged, radarBus, type PollBus } from "./bus.js";
-import { EVENT_ID, MENTION_EVENT_ID, PR_EVENT_ID } from "./events.js";
+import { DELEGATE_EVENT_ID, EVENT_ID, MENTION_EVENT_ID, PR_EVENT_ID } from "./events.js";
 import { mapRadar } from "./map.js";
 import { createPoller, type PollerDeps } from "./poll-loop.js";
 import type { RadarData } from "./query.js";
@@ -23,18 +23,21 @@ function fakeHandle() {
   const calls: (["sync", string, string[]] | ["markReady", number] | ["readToken", number])[] = [];
   const prSyncs: [string, string[]][] = [];
   const mentionSyncs: [string, string[]][] = [];
+  const delegateSyncs: [string, string[]][] = [];
   let gen = 0;
   return {
     calls,
     prSyncs,
     mentionSyncs,
+    delegateSyncs,
     bump: () => ++gen,
     handle: {
       sync(event: string, scope: string, events: BusEventInput[]) {
-        expect([EVENT_ID, PR_EVENT_ID, MENTION_EVENT_ID]).toContain(event);
+        expect([EVENT_ID, PR_EVENT_ID, MENTION_EVENT_ID, DELEGATE_EVENT_ID]).toContain(event);
         if (event === EVENT_ID) calls.push(["sync", scope, events.map((e) => e.key)]);
         else if (event === PR_EVENT_ID) prSyncs.push([scope, events.map((e) => e.key)]);
-        else mentionSyncs.push([scope, events.map((e) => e.key)]);
+        else if (event === MENTION_EVENT_ID) mentionSyncs.push([scope, events.map((e) => e.key)]);
+        else delegateSyncs.push([scope, events.map((e) => e.key)]);
         return [];
       },
       readToken() {
@@ -65,6 +68,17 @@ describe("radarBus", () => {
     expect(f.calls).toEqual([["sync", "a", ["iss-c1"]], ["markReady", 7]]);
     expect(f.prSyncs).toEqual([["a", ["iss-a2"]]]);
     expect(f.mentionSyncs).toEqual([["a", ["n-cm1", "n3", "n2", "n4", "n7"]]]);
+    expect(f.delegateSyncs).toEqual([["a", ["cd-cost", "cd-reply", "cd-top"]]]);
+  });
+
+  test("the skip setting is read at each poll", () => {
+    const f = fakeHandle();
+    let pattern = "cost report";
+    const b = radarBus(f.handle, seenFn([]), () => pattern);
+    b.polled([{ w: ws("a"), lists }], snap([ws("a")]), 1);
+    pattern = "";
+    b.polled([{ w: ws("a"), lists }], snap([ws("a")]), 2);
+    expect(f.delegateSyncs).toEqual([["a", ["cd-reply", "cd-top"]], ["a", ["cd-cost", "cd-reply", "cd-top"]]]);
   });
 
   test("a workspace not polled ok this time: its siblings still sync, nothing is marked ready", () => {
@@ -90,6 +104,7 @@ describe("radarBus", () => {
     expect(f.calls).toEqual([["sync", "a", []]]);
     expect(f.prSyncs).toEqual([["a", []]]);
     expect(f.mentionSyncs).toEqual([["a", []]]);
+    expect(f.delegateSyncs).toEqual([["a", []]]);
   });
 });
 
@@ -105,7 +120,7 @@ describe("the poll loop feeds the bus", () => {
         return true;
       },
       setRejected: () => {},
-      getSettings: () => ({ refreshSec: 300 }),
+      getSettings: () => ({ refreshSec: 300, skipDelegateComments: "" }),
       changed: () => {},
       now: () => NOW,
       setTimer: (() => ({ unref() {} })) as unknown as PollerDeps["setTimer"],

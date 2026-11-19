@@ -140,9 +140,19 @@ describe("routes", () => {
   });
 
   test("settings save the interval", async () => {
-    expect((await call("PUT", "/settings", { refreshSec: 900 })).json()).toEqual({ refreshSec: 900 });
+    expect((await call("PUT", "/settings", { refreshSec: 900 })).json()).toEqual({ refreshSec: 900, skipDelegateComments: "" });
     expect((await call("GET", "/settings")).json().refreshSec).toBe(900);
     expect((await call("PUT", "/settings", { refreshSec: 42 })).status).toBe(400);
+  });
+
+  test("settings save the delegate skip pattern, keep the interval, refuse a broken regex", async () => {
+    expect((await call("PUT", "/settings", { skipDelegateComments: "^\\*\\*.*cost report" })).json()).toEqual({ refreshSec: 900, skipDelegateComments: "^\\*\\*.*cost report" });
+    expect((await call("GET", "/settings")).json().skipDelegateComments).toBe("^\\*\\*.*cost report");
+    const bad = await call("PUT", "/settings", { skipDelegateComments: "(" });
+    expect(bad.status).toBe(400);
+    expect(bad.json().error).toBe("Not a valid regular expression");
+    expect((await call("PUT", "/settings", { skipDelegateComments: "x".repeat(201) })).status).toBe(400);
+    expect((await call("PUT", "/settings", { skipDelegateComments: "" })).json().skipDelegateComments).toBe("");
   });
 
   test("replace: a key of the same workspace replaces it; a rejected one is refused", async () => {

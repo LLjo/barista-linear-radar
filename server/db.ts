@@ -38,6 +38,11 @@ db.exec(`
   );
 `);
 
+// 0.5.0: the delegate-replied skip pattern ("" = skip none).
+if (!db.query<{ name: string }>("PRAGMA table_info(linear_radar_settings)").some((c) => c.name === "skip_delegate_comments")) {
+  db.exec("ALTER TABLE linear_radar_settings ADD COLUMN skip_delegate_comments TEXT NOT NULL DEFAULT ''");
+}
+
 /** Checkpoint the WAL and close — registered with `registerShutdown` in index.ts. */
 export function closeDb(): void {
   db.close();

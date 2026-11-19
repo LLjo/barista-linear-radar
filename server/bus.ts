@@ -1,5 +1,5 @@
 import type { BusHandle } from "@barista/plugin-sdk";
-import { allPolledOk, EVENT_ID, issueIds, MENTION_EVENT_ID, mentionEvents, PR_EVENT_ID, prEvents, workspaceEvents } from "./events.js";
+import { allPolledOk, DELEGATE_EVENT_ID, delegateEvents, EVENT_ID, issueIds, MENTION_EVENT_ID, mentionEvents, PR_EVENT_ID, prEvents, skipRegex, workspaceEvents } from "./events.js";
 import type { Lists, Snapshot, WorkspaceRecord } from "./types.js";
 import type { FirstSeen } from "./workspaces.js";
 
@@ -21,14 +21,22 @@ export type RadarBusHandle = Pick<BusHandle, "sync" | "readToken" | "markReady">
  * URL key; one issue lives in one workspace, so a key never moves between scopes). Issues are read from
  * `firstSeen` at sync time, so a workspace removed mid-poll (its rows deleted) syncs nothing back.
  */
-export function radarBus(bus: RadarBusHandle, firstSeen: (ids: string[]) => Map<string, FirstSeen>): PollBus {
+export function radarBus(
+  bus: RadarBusHandle,
+  firstSeen: (ids: string[]) => Map<string, FirstSeen>,
+  /** The delegate-replied skip setting, read at each poll. */
+  skipPattern: () => string = () => "",
+): PollBus {
   return {
     readToken: () => bus.readToken(),
     polled(good, s, token) {
+      const skip = skipRegex(skipPattern());
       for (const { w, lists } of good) {
-        bus.sync(EVENT_ID, w.id, workspaceEvents(lists, firstSeen(issueIds(lists))));
+        const seen = firstSeen(issueIds(lists));
+        bus.sync(EVENT_ID, w.id, workspaceEvents(lists, seen));
         bus.sync(PR_EVENT_ID, w.id, prEvents(lists, s.fetchedAt ?? new Date().toISOString()));
         bus.sync(MENTION_EVENT_ID, w.id, mentionEvents(lists));
+        bus.sync(DELEGATE_EVENT_ID, w.id, delegateEvents(lists, seen, skip));
       }
       if (allPolledOk(s)) bus.markReady(token);
     },
@@ -36,6 +44,7 @@ export function radarBus(bus: RadarBusHandle, firstSeen: (ids: string[]) => Map<
       bus.sync(EVENT_ID, workspaceId, []);
       bus.sync(PR_EVENT_ID, workspaceId, []);
       bus.sync(MENTION_EVENT_ID, workspaceId, []);
+      bus.sync(DELEGATE_EVENT_ID, workspaceId, []);
     },
   };
 }

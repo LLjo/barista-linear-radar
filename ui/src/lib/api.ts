@@ -13,7 +13,7 @@ const json = (method: string, body: unknown): RequestInit => ({
 export const getSnapshot = () => unwrap<Snapshot>(fetch(`${BASE}/issues`));
 export const refresh = () => unwrap<Snapshot>(fetch(`${BASE}/refresh`, { method: "POST" }));
 export const getSettings = () => unwrap<SettingsReply>(fetch(`${BASE}/settings`));
-export const saveSettings = (s: Settings) => unwrap<Settings>(fetch(`${BASE}/settings`, json("PUT", s)));
+export const saveSettings = (s: Partial<Settings>) => unwrap<Settings>(fetch(`${BASE}/settings`, json("PUT", s)));
 export const addKey = (apiKey: string) => unwrap<WorkspacePublic>(fetch(`${BASE}/workspaces`, json("POST", { apiKey })));
 export const replaceKey = (id: string, apiKey: string) =>
   unwrap<WorkspacePublic>(fetch(`${BASE}/workspaces/${encodeURIComponent(id)}/key`, json("PUT", { apiKey })));
