@@ -3,7 +3,7 @@
   "title": "Linear Radar",
   "description": "Linear issues that involve you, unseen first",
   "icon": "linear",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "contributes": {
     "events": [
       {
@@ -58,6 +58,23 @@
           { "name": "kind", "label": "Mentioned in", "type": "enum", "options": ["issue", "comment"] },
           { "name": "by", "label": "Mentioned by", "type": "string" },
           { "name": "delegate", "label": "Delegate (agent)", "type": "string" }
+        ]
+      },
+      {
+        "id": "delegate-replied",
+        "label": "The agent on my Linear issue commented",
+        "description": "The agent an issue assigned to you is delegated to posts a comment on it: top level or a thread reply, agent-session replies included. Fires once per comment, with the issue, the comment and the comment it replies to in the brief. Comments that match the skip pattern in Linear Radar's settings never fire, nor comments made before the workspace's first sync, before the poll ahead of the one that first saw the issue, or before the skip pattern last changed.",
+        "version": 1,
+        "key": "One per Linear comment (its id)",
+        "fields": [
+          { "name": "team", "label": "Team key", "type": "string" },
+          { "name": "label", "label": "Label", "type": "string", "multi": true },
+          { "name": "priority", "label": "Priority", "type": "enum", "options": ["urgent", "high", "medium", "low", "none"] },
+          { "name": "assignee", "label": "Assignee", "type": "enum", "options": ["me", "someone else", "unassigned"] },
+          { "name": "project", "label": "Project", "type": "string" },
+          { "name": "workspace", "label": "Workspace", "type": "string" },
+          { "name": "delegate", "label": "Delegate (agent)", "type": "string" },
+          { "name": "author", "label": "Comment author (the agent)", "type": "string" }
         ]
       }
     ]

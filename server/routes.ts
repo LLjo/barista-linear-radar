@@ -6,7 +6,7 @@ import { gql, LinearError } from "./linear.js";
 import { changed, forget, getSnapshot, poll, refreshNow } from "./poller.js";
 import { VIEWER_QUERY, type Viewer } from "./query.js";
 import { getSettings, saveSettings } from "./settings.js";
-import { REFRESH_CHOICES, type IssueRow, type SettingsReply, type Snapshot } from "./types.js";
+import { REFRESH_CHOICES, SKIP_PATTERN_MAX, type IssueRow, type SettingsReply, type Snapshot } from "./types.js";
 import { toPublic } from "./snapshot.js";
 import { getWorkspace, listWorkspaces } from "./workspaces.js";
 
@@ -20,9 +20,22 @@ const keyBody = zValidator(
   z.object({ apiKey: z.string().trim().min(20).max(200).regex(/^\S+$/) }),
   (r, c) => (r.success ? undefined : c.json({ error: NOT_A_KEY }, 400)),
 );
+/** A skip pattern must compile: a broken one would silently skip nothing. */
+const compiles = (p: string) => {
+  try {
+    new RegExp(p, "i");
+    return true;
+  } catch {
+    return false;
+  }
+};
 const settingsBody = zValidator(
   "json",
-  z.object({ refreshSec: z.union(REFRESH_CHOICES.map((n) => z.literal(n)) as [z.ZodLiteral<60>, z.ZodLiteral<300>, z.ZodLiteral<900>]) }),
+  z.object({
+    refreshSec: z.union(REFRESH_CHOICES.map((n) => z.literal(n)) as [z.ZodLiteral<60>, z.ZodLiteral<300>, z.ZodLiteral<900>]).optional(),
+    skipDelegateComments: z.string().max(SKIP_PATTERN_MAX).refine(compiles, "Not a valid regular expression").optional(),
+  }),
+  (r, c) => (r.success ? undefined : c.json({ error: r.error.issues[0]?.message ?? "Invalid settings" }, 400)),
 );
 
 type Checked = { ok: true; ws: NewWorkspace } | { ok: false; status: 400 | 502; error: string };

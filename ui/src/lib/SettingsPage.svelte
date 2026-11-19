@@ -14,6 +14,30 @@
 	let replaceDraft = $state("");
 	let replaceError = $state<string | null>(null);
 
+	// The delegate-replied skip pattern: a regex, "" = skip nothing.
+	let skip = $state("");
+	let skipSaved = $state("");
+	let skipError = $state<string | null>(null);
+	let skipNote = $state<string | null>(null);
+	$effect(() => {
+		api.getSettings().then((s) => (skip = skipSaved = s.skipDelegateComments ?? ""), () => {});
+	});
+
+	async function saveSkip() {
+		if (busy) return;
+		busy = true;
+		try {
+			skip = skipSaved = (await api.saveSettings({ skipDelegateComments: skip.trim() })).skipDelegateComments;
+			skipError = null;
+			skipNote = "Saved.";
+		} catch (e) {
+			skipError = (e as Error).message;
+			skipNote = null;
+		} finally {
+			busy = false;
+		}
+	}
+
 	async function add() {
 		if (!draft.trim() || busy) return;
 		busy = true;
@@ -97,6 +121,19 @@
 		A key reads one workspace, so add one key per workspace. Read access is all Linear Radar needs: it never writes to Linear.<br />
 		The key is stored on this Barista host only. It is never shown again, never logged and never sent to the browser; only its last 4 characters are.
 	</div>
+
+	<h2>Agent comments</h2>
+	<div class="add">
+		<input type="text" placeholder="Skip pattern, e.g. ^\*\*.*cost report" autocomplete="off" spellcheck="false" maxlength="200"
+			bind:value={skip} oninput={() => (skipNote = null)} onkeydown={(e) => e.key === "Enter" && saveSkip()} />
+		<button type="button" disabled={busy || skip.trim() === skipSaved} onclick={saveSkip}>Save</button>
+	</div>
+	{#if skipError}<div class="err">{skipError}</div>{:else if skipNote}<div class="ok-note">{skipNote}</div>{/if}
+	<div class="help">
+		The Automations event <b>The agent on my Linear issue commented</b> fires when an agent comments on an issue of yours that is delegated to it.
+		Comments matching this regular expression (case-insensitive) never fire it, for example an agent's periodic status or cost comments.
+		Leave it empty to skip nothing.
+	</div>
 </div>
 
 <style>
@@ -115,5 +152,6 @@
 	.add button:disabled { opacity: .6; cursor: default; }
 	.help { color: var(--ink-3); font-size: var(--t-s); line-height: 1.6; }
 	.err { color: var(--fail-fg); font-size: var(--t-s); }
+	.ok-note { color: var(--ink-3); font-size: var(--t-s); }
 	.back { color: var(--ink-3); font-size: var(--t-s); }
 </style>

@@ -39,7 +39,7 @@ function world(rows: WorkspaceRecord[], linear: Record<string, () => Promise<Rad
     setRejected: (w) => {
       rows.find((r) => r.id === w.id)!.status = "rejected";
     },
-    getSettings: () => ({ refreshSec: 300 }),
+    getSettings: () => ({ refreshSec: 300, skipDelegateComments: "" }),
     changed: () => {},
     now: () => NOW,
     setTimer: (() => {

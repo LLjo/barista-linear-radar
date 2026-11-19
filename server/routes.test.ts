@@ -140,9 +140,32 @@ describe("routes", () => {
   });
 
   test("settings save the interval", async () => {
-    expect((await call("PUT", "/settings", { refreshSec: 900 })).json()).toEqual({ refreshSec: 900 });
+    expect((await call("PUT", "/settings", { refreshSec: 900 })).json()).toEqual({ refreshSec: 900, skipDelegateComments: "" });
     expect((await call("GET", "/settings")).json().refreshSec).toBe(900);
     expect((await call("PUT", "/settings", { refreshSec: 42 })).status).toBe(400);
+  });
+
+  test("settings save the delegate skip pattern, keep the interval, refuse a broken regex", async () => {
+    expect((await call("PUT", "/settings", { skipDelegateComments: "^\\*\\*.*cost report" })).json()).toEqual({ refreshSec: 900, skipDelegateComments: "^\\*\\*.*cost report" });
+    expect((await call("GET", "/settings")).json().skipDelegateComments).toBe("^\\*\\*.*cost report");
+    const bad = await call("PUT", "/settings", { skipDelegateComments: "(" });
+    expect(bad.status).toBe(400);
+    expect(bad.json().error).toBe("Not a valid regular expression");
+    expect((await call("PUT", "/settings", { skipDelegateComments: "x".repeat(201) })).status).toBe(400);
+    expect((await call("PUT", "/settings", { skipDelegateComments: "" })).json().skipDelegateComments).toBe("");
+  });
+
+  test("the skip pattern's change time moves only when the pattern changes", async () => {
+    const { getDelegateSkip } = await import("./settings.js");
+    await call("PUT", "/settings", { skipDelegateComments: "status" });
+    const since = getDelegateSkip().since;
+    expect(getDelegateSkip()).toEqual({ pattern: "status", since: expect.any(String) });
+    await Bun.sleep(5);
+    await call("PUT", "/settings", { refreshSec: 300 });
+    await call("PUT", "/settings", { skipDelegateComments: "status" });
+    expect(getDelegateSkip().since).toBe(since);
+    await call("PUT", "/settings", { skipDelegateComments: "" });
+    expect(getDelegateSkip().since! > since!).toBe(true);
   });
 
   test("replace: a key of the same workspace replaces it; a rejected one is refused", async () => {
